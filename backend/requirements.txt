@@ -1,0 +1,51 @@
+# Django core
+Django==5.1.6
+djangorestframework==3.15.2
+django-cors-headers==4.6.0
+django-filter==24.3
+django-environ==0.12.0
+
+# Database
+psycopg2-binary==2.9.10
+
+# Authentication & Security
+djangorestframework-simplejwt==5.4.0
+django-allauth==65.4.1
+django-otp==1.5.4
+qrcode==8.0
+
+# Async tasks
+celery==5.4.0
+redis==5.2.1
+django-celery-beat==2.7.0
+
+# Storage (S3/MinIO)
+django-storages==1.14.4
+boto3==1.36.7
+
+# PDF generation
+WeasyPrint==63.1
+
+# Image handling
+Pillow==11.1.0
+
+# AI - Claude API
+anthropic==0.43.0
+
+# PDF text extraction
+PyMuPDF==1.25.3
+pdfplumber==0.11.4
+
+# Email
+sendgrid==6.11.0
+
+# Utils
+python-dateutil==2.9.0
+uuid6==2024.7.10
+
+# Dev tools
+django-extensions==3.2.3
+django-debug-toolbar==5.0.1
+
+# Production server
+gunicorn==23.0.0
