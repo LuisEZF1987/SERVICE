@@ -9,6 +9,9 @@ DEBUG = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_SSL_REDIRECT = True
+# Trust the reverse proxy's X-Forwarded-Proto header (TLS terminates at the proxy),
+# so SSL redirect and HSTS work without a redirect loop.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
@@ -34,15 +37,15 @@ LOGGING = {
         },
     },
     "handlers": {
-        "file": {
+        # Log to stdout/stderr so container logs are captured by `docker logs`.
+        "console": {
             "level": "WARNING",
-            "class": "logging.FileHandler",
-            "filename": "/var/log/dimedservice/django.log",
+            "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
     },
     "root": {
-        "handlers": ["file"],
+        "handlers": ["console"],
         "level": "WARNING",
     },
 }
