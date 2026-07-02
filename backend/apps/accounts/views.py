@@ -6,6 +6,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.permissions import IsAdmin, IsAdminOrCoordinator
+
 from .models import AuditLog, User
 from .serializers import (
     AcceptPrivacyPolicySerializer,

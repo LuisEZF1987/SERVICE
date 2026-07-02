@@ -35,6 +35,7 @@ yarn-error.log*
 # React build
 frontend/dist/
 frontend/build/
+*.tsbuildinfo
 
 # IDE
 .vscode/

@@ -6,7 +6,8 @@ from rest_framework.response import Response
 
 from apps.accounts.models import AuditLog
 from apps.accounts.utils import create_audit_log
-from common.permissions import IsAdminOrCoordinator, IsTechnician
+from common.permissions import IsAdminOrCoordinator
+
 from .models import ChecklistExecution, WorkOrder, WorkOrderPhoto, WorkOrderSparePart
 from .serializers import (
     ChecklistExecutionSerializer,

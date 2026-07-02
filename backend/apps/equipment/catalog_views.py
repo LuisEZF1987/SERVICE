@@ -9,13 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from common.permissions import IsAdminOrCoordinator
+
 from .catalog_models import EquipmentModel, EquipmentSeries, Manufacturer
 from .catalog_serializers import (
     EquipmentModelSerializer,
     EquipmentSeriesSerializer,
     ManufacturerSerializer,
 )
-
 
 # ---------------------------------------------------------------------------
 # ViewSets

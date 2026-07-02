@@ -1,18 +1,21 @@
 """Load real contract data from Hospital General Latacunga into DimedService."""
 import os
+
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 django.setup()
 
+from datetime import date
+
+from django.utils import timezone
+
 from apps.accounts.models import User
 from apps.clients.models import Client, ClientContact
-from apps.equipment.models import Equipment
 from apps.contracts.models import Contract
-from apps.work_orders.models import WorkOrder
+from apps.equipment.models import Equipment
 from apps.scheduling.models import ScheduledMaintenance
-from django.utils import timezone
-from datetime import date
+from apps.work_orders.models import WorkOrder
 
 admin = User.objects.get(username="admin")
 
