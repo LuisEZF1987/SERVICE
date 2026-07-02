@@ -50,6 +50,9 @@ class ScheduledMaintenance(BaseModel):
         "Estado", max_length=10, choices=Status.choices, default=Status.PENDING
     )
     alert_sent = models.BooleanField("Alerta enviada", default=False)
+    alerts_sent = models.JSONField(
+        "Hitos de alerta enviados", default=list, blank=True
+    )
 
     class Meta:
         verbose_name = "Mantenimiento Programado"

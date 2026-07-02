@@ -9,7 +9,7 @@ export interface User {
   full_name: string
   role: 'ADMIN' | 'COORDINATOR' | 'TECHNICIAN' | 'MANAGEMENT' | 'CLIENT'
   role_display: string
-  company_type: 'DIMED' | 'VIAT' | 'CLIENT'
+  company_type: 'DIMED' | 'CLIENT'
   phone: string
   position: string
   is_2fa_enabled: boolean

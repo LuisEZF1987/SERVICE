@@ -16,29 +16,29 @@ from datetime import date
 
 admin = User.objects.get(username="admin")
 
-# === TECNICOS VIAT ===
+# === TECNICOS DIMED ===
 tech1, _ = User.objects.get_or_create(
     username="jmorales",
     defaults=dict(
         first_name="Jorge", last_name="Morales",
-        email="jmorales@viat.ec", role="TECHNICIAN",
-        company_type="VIAT", phone="0987654321",
+        email="jmorales@dimedhealthcare.com", role="TECHNICIAN",
+        company_type="DIMED", phone="0987654321",
         position="Ingeniero Biomédico",
     ),
 )
-tech1.set_password("viat2026")
+tech1.set_password("dimed2026")
 tech1.save()
 
 tech2, _ = User.objects.get_or_create(
     username="clopez",
     defaults=dict(
         first_name="Carlos", last_name="López",
-        email="clopez@viat.ec", role="TECHNICIAN",
-        company_type="VIAT", phone="0991234567",
+        email="clopez@dimedhealthcare.com", role="TECHNICIAN",
+        company_type="DIMED", phone="0991234567",
         position="Ingeniero Biomédico",
     ),
 )
-tech2.set_password("viat2026")
+tech2.set_password("dimed2026")
 tech2.save()
 print(f"Técnicos: {tech1}, {tech2}")
 
@@ -147,7 +147,7 @@ ot1, _ = WorkOrder.objects.get_or_create(
     number="OT-2024-0001",
     defaults=dict(
         ot_type="INSTALLATION", priority="NORMAL", status="CLOSED",
-        executing_company="VIAT", equipment=equipo, client=client,
+        equipment=equipo, client=client,
         contract=contract, technician=tech1,
         arrival_at=timezone.make_aware(timezone.datetime(2024, 12, 10, 9, 0)),
         started_at=timezone.make_aware(timezone.datetime(2024, 12, 10, 9, 30)),
@@ -175,7 +175,7 @@ ot2, _ = WorkOrder.objects.get_or_create(
     number="OT-2025-0001",
     defaults=dict(
         ot_type="PREVENTIVE", priority="SCHEDULED", status="CLOSED",
-        executing_company="VIAT", equipment=equipo, client=client,
+        equipment=equipo, client=client,
         contract=contract, technician=tech1,
         arrival_at=timezone.make_aware(timezone.datetime(2025, 6, 23, 8, 30)),
         started_at=timezone.make_aware(timezone.datetime(2025, 6, 23, 9, 0)),
@@ -204,7 +204,7 @@ ot3, _ = WorkOrder.objects.get_or_create(
     number="OT-2025-0002",
     defaults=dict(
         ot_type="PREVENTIVE", priority="SCHEDULED", status="IN_PROGRESS",
-        executing_company="VIAT", equipment=equipo, client=client,
+        equipment=equipo, client=client,
         contract=contract, technician=tech2,
         arrival_at=timezone.make_aware(timezone.datetime(2025, 12, 15, 8, 30)),
         started_at=timezone.make_aware(timezone.datetime(2025, 12, 15, 9, 0)),
@@ -219,7 +219,7 @@ ot4, _ = WorkOrder.objects.get_or_create(
     number="OT-2026-0001",
     defaults=dict(
         ot_type="CORRECTIVE", priority="URGENT", status="OPEN",
-        executing_company="VIAT", equipment=equipo, client=client,
+        equipment=equipo, client=client,
         contract=contract, technician=tech1,
         reported_problem="Error E-105 al iniciar fluoroscopía. Imagen se congela "
             "intermitentemente durante procedimientos quirúrgicos. Hospital solicita "
@@ -234,7 +234,7 @@ ot5, _ = WorkOrder.objects.get_or_create(
     number="OT-2026-0002",
     defaults=dict(
         ot_type="CALIBRATION", priority="NORMAL", status="PENDING_SIGNATURE",
-        executing_company="VIAT", equipment=equipo, client=client,
+        equipment=equipo, client=client,
         contract=contract, technician=tech2,
         arrival_at=timezone.make_aware(timezone.datetime(2026, 3, 10, 9, 0)),
         started_at=timezone.make_aware(timezone.datetime(2026, 3, 10, 9, 30)),
@@ -287,4 +287,4 @@ print(f"  - En ejecución: {WorkOrder.objects.filter(status='IN_PROGRESS').count
 print(f"  - Abiertas: {WorkOrder.objects.filter(status='OPEN').count()}")
 print(f"  - Pendiente firma: {WorkOrder.objects.filter(status='PENDING_SIGNATURE').count()}")
 print(f"Mantenimientos programados: {ScheduledMaintenance.objects.count()}")
-print(f"Técnicos Viat: {User.objects.filter(role='TECHNICIAN').count()}")
+print(f"Técnicos: {User.objects.filter(role='TECHNICIAN').count()}")

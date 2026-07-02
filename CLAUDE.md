@@ -40,7 +40,8 @@ Empresa: Dimed Healthcare S.A. (Ecuador)
 - All monetary values use DecimalField(max_digits=12, decimal_places=2)
 
 ## Key Business Rules
-- OT firmada por cliente = único documento que habilita pago a Viat
-- Cliente sin NDA firmado = inactivo (no puede tener equipos ni OT)
-- Técnicos Viat NO ven información financiera de Dimed-Cliente
-- Dos flujos financieros separados: Dimed↔Cliente (cobro) y Dimed↔Viat (pago)
+- Todo el servicio técnico lo ejecuta Dimed Healthcare directamente (no hay subcontratistas).
+- OT firmada por cliente = documento oficial que certifica el servicio realizado; es la base para facturar al cliente.
+- Cliente sin NDA firmado = inactivo (no puede tener equipos ni OT).
+- Una OT cerrada queda bloqueada e inmutable.
+- La facturación y la contabilidad se manejan en un sistema externo propio de Dimed; este sistema NO factura.

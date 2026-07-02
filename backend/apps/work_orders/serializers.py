@@ -53,7 +53,7 @@ class WorkOrderSerializer(serializers.ModelSerializer):
         model = WorkOrder
         fields = [
             "id", "number", "ot_type", "type_display", "priority", "priority_display",
-            "status", "status_display", "executing_company",
+            "status", "status_display",
             "equipment", "equipment_code", "equipment_description",
             "client", "client_name", "contract", "technician", "technician_name",
             "template_version",
@@ -112,3 +112,8 @@ class SignWorkOrderSerializer(serializers.Serializer):
     client_signature = serializers.ImageField()
     client_signer_name = serializers.CharField(max_length=200)
     client_signer_position = serializers.CharField(max_length=100)
+
+
+class TechnicianSignWorkOrderSerializer(serializers.Serializer):
+    """Serializer for the technician's signature on a work order."""
+    technician_signature = serializers.ImageField()

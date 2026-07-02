@@ -25,11 +25,6 @@ const PRIORITY_OPTIONS = [
   { value: 'SCHEDULED', label: 'Programado' },
 ]
 
-const COMPANY_OPTIONS = [
-  { value: 'VIAT', label: 'Viat' },
-  { value: 'DIMED', label: 'Dimed Healthcare' },
-]
-
 interface WorkOrderFormModalProps {
   open: boolean
   onClose: () => void
@@ -42,7 +37,6 @@ interface FormData {
   equipment: string
   client: string
   technician: string
-  executing_company: string
   reported_problem: string
 }
 
@@ -52,7 +46,6 @@ const defaultForm: FormData = {
   equipment: '',
   client: '',
   technician: '',
-  executing_company: 'DIMED',
   reported_problem: '',
 }
 
@@ -115,7 +108,6 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
         equipment: workOrder.equipment,
         client: workOrder.client,
         technician: workOrder.technician,
-        executing_company: workOrder.executing_company,
         reported_problem: workOrder.reported_problem,
       })
     } else {
@@ -181,7 +173,6 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
       equipment: form.equipment,
       client: form.client,
       technician: form.technician,
-      executing_company: form.executing_company,
       reported_problem: form.reported_problem,
     }
 
@@ -249,13 +240,6 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
         options={technicianOptions}
         value={form.technician}
         onChange={(e) => updateField('technician', e.target.value)}
-      />
-
-      <Select
-        label="Empresa Ejecutora"
-        options={COMPANY_OPTIONS}
-        value={form.executing_company}
-        onChange={(e) => updateField('executing_company', e.target.value)}
       />
 
       <Textarea

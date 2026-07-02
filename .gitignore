@@ -51,6 +51,17 @@ desktop.ini
 # Docker
 docker-compose.override.yml
 
+# Claude Code (local agent config)
+.claude/
+
+# Dropbox temp/conflict files
+*.tmp.*
+*conflicted copy*
+
+# Celery beat (file-based scheduler)
+celerybeat-schedule*
+celerybeat.pid
+
 # MinIO data
 minio_data/
 

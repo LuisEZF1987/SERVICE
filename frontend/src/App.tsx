@@ -11,7 +11,6 @@ import WorkOrderDetailPage from './pages/work-orders/WorkOrderDetailPage'
 import ContractsPage from './pages/contracts/ContractsPage'
 import SchedulingPage from './pages/scheduling/SchedulingPage'
 import SparePartsPage from './pages/spare-parts/SparePartsPage'
-import BillingPage from './pages/billing/BillingPage'
 import CatalogPage from './pages/catalog/CatalogPage'
 import ReportsPage from './pages/reports/ReportsPage'
 import MainLayout from './layouts/MainLayout'
@@ -57,7 +56,6 @@ export default function App() {
                 <Route path="/contracts" element={<ContractsPage />} />
                 <Route path="/scheduling" element={<SchedulingPage />} />
                 <Route path="/spare-parts" element={<SparePartsPage />} />
-                <Route path="/billing" element={<BillingPage />} />
                 <Route path="/catalog" element={<CatalogPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
               </Routes>

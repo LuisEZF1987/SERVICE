@@ -24,7 +24,7 @@ class WorkOrderAdmin(admin.ModelAdmin):
         "number", "ot_type", "priority", "status", "equipment",
         "client", "technician", "opened_at",
     ]
-    list_filter = ["ot_type", "status", "priority", "executing_company"]
+    list_filter = ["ot_type", "status", "priority"]
     search_fields = ["number", "equipment__internal_code", "client__name"]
     readonly_fields = [
         "number", "opened_at", "closed_at", "total_hours",

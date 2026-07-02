@@ -16,7 +16,6 @@ urlpatterns = [
     path("api/v1/spare-parts/", include("apps.spare_parts.urls")),
     path("api/v1/scheduling/", include("apps.scheduling.urls")),
     path("api/v1/reports/", include("apps.reports.urls")),
-    path("api/v1/billing/", include("apps.billing.urls")),
     path("api/v1/templates/", include("apps.templates_engine.urls")),
     path("api/v1/catalog/", include("apps.equipment.catalog_urls")),
 ]

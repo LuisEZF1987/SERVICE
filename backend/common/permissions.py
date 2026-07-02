@@ -16,7 +16,7 @@ class IsCoordinator(BasePermission):
 
 
 class IsTechnician(BasePermission):
-    """Viat or Dimed technicians."""
+    """Dimed service technicians."""
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == "TECHNICIAN"

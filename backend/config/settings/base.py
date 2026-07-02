@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -48,7 +49,6 @@ LOCAL_APPS = [
     "apps.contracts",
     "apps.spare_parts",
     "apps.reports",
-    "apps.billing",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -171,6 +171,16 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Periodic tasks (file-based schedule; run with `celery -A config beat`).
+CELERY_BEAT_SCHEDULE = {
+    "process-maintenance-schedule": {
+        # Daily at 07:00 (project timezone): send 30/15/7/1-day reminders
+        # and flag overdue preventive maintenances.
+        "task": "apps.scheduling.tasks.process_maintenance_schedule",
+        "schedule": crontab(hour=7, minute=0),
+    },
+}
+
 # Session expiration (30 min inactivity)
 SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
@@ -189,12 +199,13 @@ AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = True
 
-# Email
+# Email (SendGrid SMTP relay — used in production; local overrides to console)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="servicio@dimedhealthcare.com")
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.sendgrid.net")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="apikey")
+EMAIL_HOST_PASSWORD = env("SENDGRID_API_KEY", default="")
 
 # Claude API
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
-
-# Datil (Facturación electrónica)
-DATIL_API_KEY = env("DATIL_API_KEY", default="")
-DATIL_ENVIRONMENT = env("DATIL_ENVIRONMENT", default="sandbox")

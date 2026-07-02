@@ -19,9 +19,9 @@ X_FRAME_OPTIONS = "DENY"
 # S3 storage in production
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-# Email via SendGrid
-EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
-SENDGRID_API_KEY = env("SENDGRID_API_KEY")  # noqa: F405
+# Email via SendGrid SMTP relay (EMAIL_HOST / USER / PASSWORD set in base.py).
+# EMAIL_HOST_PASSWORD reads SENDGRID_API_KEY; EMAIL_HOST_USER is the literal "apikey".
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Logging
 LOGGING = {

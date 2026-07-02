@@ -47,13 +47,6 @@ export function StatusBadge({ status }: { status: string }) {
     PENDING: { variant: 'warning', label: 'Pendiente' },
     COMPLETED: { variant: 'success', label: 'Completado' },
     OVERDUE: { variant: 'danger', label: 'Vencido' },
-    PENDING_OT: { variant: 'secondary', label: 'Pendiente OT' },
-    OT_SIGNED_WAITING_INVOICE: { variant: 'warning', label: 'Esperando factura' },
-    IN_REVIEW: { variant: 'info', label: 'En revisión' },
-    APPROVED: { variant: 'success', label: 'Aprobado' },
-    PAID: { variant: 'success', label: 'Pagado' },
-    REJECTED: { variant: 'danger', label: 'Rechazado' },
-    ISSUED: { variant: 'primary', label: 'Emitida' },
     PUBLIC: { variant: 'primary', label: 'Público' },
     PRIVATE: { variant: 'purple', label: 'Privado' },
   }
