@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.permissions import IsAdmin, IsAdminOrCoordinator
@@ -22,10 +23,21 @@ class LoginView(generics.GenericAPIView):
 
     permission_classes = [permissions.AllowAny]
     serializer_class = LoginSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            create_audit_log(
+                user=None,
+                action=AuditLog.Action.LOGIN_FAILED,
+                request=request,
+                details={"username": request.data.get("username", "")},
+            )
+            raise
         user = serializer.validated_data["user"]
 
         refresh = RefreshToken.for_user(user)

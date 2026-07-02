@@ -63,7 +63,6 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.accounts.middleware.AuditLogMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -92,9 +91,17 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": env("POSTGRES_DB", default="dimedservice"),
         "USER": env("POSTGRES_USER", default="dimed"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="dimed_dev_2026"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
         "HOST": env("POSTGRES_HOST", default="db"),
         "PORT": env("POSTGRES_PORT", default="5432"),
+    }
+}
+
+# Cache (Redis) — also backs API throttling consistently across workers
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("REDIS_CACHE_URL", default="redis://redis:6379/1"),
     }
 }
 
@@ -146,6 +153,9 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.BrowsableAPIRenderer",
     ),
     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S%z",
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+    },
 }
 
 # JWT
@@ -190,8 +200,8 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 
 # MinIO / S3 Storage
-AWS_ACCESS_KEY_ID = env("MINIO_ROOT_USER", default="dimedminio")
-AWS_SECRET_ACCESS_KEY = env("MINIO_ROOT_PASSWORD", default="dimedminio2026")
+AWS_ACCESS_KEY_ID = env("MINIO_ROOT_USER")
+AWS_SECRET_ACCESS_KEY = env("MINIO_ROOT_PASSWORD")
 AWS_STORAGE_BUCKET_NAME = env("MINIO_BUCKET_NAME", default="dimedservice")
 AWS_S3_ENDPOINT_URL = f"http://{env('MINIO_ENDPOINT', default='minio:9000')}"
 AWS_S3_USE_SSL = env.bool("MINIO_USE_SSL", default=False)
