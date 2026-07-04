@@ -1,5 +1,36 @@
 # Guía de Despliegue — DimedService
 
+## 0. Despliegue actual — Servidor de oficina (server01) ✅
+
+DimedService corre hoy en el **servidor de oficina** (`server01`, Ubuntu 24.04),
+accesible por red privada (LAN + Tailscale), sin exposición a internet:
+
+- **URLs**: `http://100.70.145.62` (Tailscale) · `http://192.168.100.78` (LAN oficina)
+- **Código**: `~/apps/dimedservice` (usuario `dimed`); llega por `git bundle` + `scp`
+  (el servidor no tiene credenciales de GitHub)
+- **Stack**: `docker compose -f docker-compose.server.yml up -d --build`
+  (gunicorn + celery + celery-beat + nginx:80, reinicio automático)
+- **Settings**: `config.settings.staging` — endurecido como producción pero sobre
+  HTTP en red privada; archivos en volumen local (`media_volume`); correos a
+  consola hasta configurar `SENDGRID_API_KEY` en el `.env` del servidor
+- **Logs**: `docker compose -f docker-compose.server.yml logs -f backend celery`
+- **Actualizar** (desde la máquina de desarrollo):
+  ```bash
+  git bundle create /tmp/dimedservice.bundle main
+  scp /tmp/dimedservice.bundle dimed@100.70.145.62:/tmp/
+  ssh dimed@100.70.145.62 'cd ~/apps/dimedservice && git pull /tmp/dimedservice.bundle main \
+    && docker compose -f docker-compose.server.yml up -d --build'
+  ```
+- **Backup de la base** (recomendado programar en cron del servidor):
+  ```bash
+  docker compose -f docker-compose.server.yml exec -T db pg_dump -U dimed dimedservice | gzip > backup_$(date +%F).sql.gz
+  ```
+
+La guía siguiente aplica para el despliegue **público en VPS con TLS** (futuro,
+si clientes externos necesitan acceso por internet).
+
+---
+
 Guía para poner DimedService en **producción**. El objetivo es un despliegue con
 Docker detrás de un reverse proxy con TLS.
 
