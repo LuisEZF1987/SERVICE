@@ -30,7 +30,7 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     """
 
     queryset = WorkOrder.objects.select_related(
-        "equipment", "client", "technician", "contract"
+        "equipment", "client", "technician", "contract", "ticket"
     ).prefetch_related("photos", "spare_parts_used", "checklist_items")
     filterset_fields = ["ot_type", "status", "priority", "technician", "client", "equipment"]
     search_fields = ["number", "equipment__internal_code", "client__name"]

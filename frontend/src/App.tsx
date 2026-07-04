@@ -14,6 +14,8 @@ import SparePartsPage from './pages/spare-parts/SparePartsPage'
 import CatalogPage from './pages/catalog/CatalogPage'
 import ReportsPage from './pages/reports/ReportsPage'
 import UsersPage from './pages/users/UsersPage'
+import TicketsPage from './pages/tickets/TicketsPage'
+import TicketDetailPage from './pages/tickets/TicketDetailPage'
 import MainLayout from './layouts/MainLayout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -52,6 +54,8 @@ export default function App() {
                 <Route path="/clients/:id" element={<ClientDetailPage />} />
                 <Route path="/equipment" element={<EquipmentPage />} />
                 <Route path="/equipment/:id" element={<EquipmentDetailPage />} />
+                <Route path="/tickets" element={<TicketsPage />} />
+                <Route path="/tickets/:id" element={<TicketDetailPage />} />
                 <Route path="/work-orders" element={<WorkOrdersPage />} />
                 <Route path="/work-orders/:id" element={<WorkOrderDetailPage />} />
                 <Route path="/contracts" element={<ContractsPage />} />

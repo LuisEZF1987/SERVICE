@@ -44,6 +44,7 @@ LOCAL_APPS = [
     "apps.clients",
     "apps.equipment",
     "apps.templates_engine",
+    "apps.tickets",
     "apps.work_orders",
     "apps.scheduling",
     "apps.contracts",

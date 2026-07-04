@@ -41,6 +41,7 @@ Empresa: Dimed Healthcare S.A. (Ecuador)
 
 ## Key Business Rules
 - Todo el servicio técnico lo ejecuta Dimed Healthcare directamente (no hay subcontratistas).
+- El ticket (TKT-YYYY-NNNN) es el historial del caso reportado por el cliente; una falla puede generar varias OTs vinculadas. El SLA del ticket se hereda del contrato (sla_response_hours). Las notas internas de tickets nunca se muestran ni envían al cliente.
 - OT firmada por cliente = documento oficial que certifica el servicio realizado; es la base para facturar al cliente.
 - Cliente sin NDA firmado = inactivo (no puede tener equipos ni OT).
 - Una OT cerrada queda bloqueada e inmutable.

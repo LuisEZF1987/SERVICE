@@ -86,6 +86,16 @@ class WorkOrder(BaseModel):
         limit_choices_to={"role": "TECHNICIAN"},
     )
 
+    # Support ticket that originated this OT (one case → several visits)
+    ticket = models.ForeignKey(
+        "tickets.Ticket",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="work_orders",
+        verbose_name="Ticket de origen",
+    )
+
     # Maintenance template (for preventive OTs)
     template_version = models.ForeignKey(
         "templates_engine.TemplateVersion",
