@@ -1,7 +1,8 @@
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.models import AuditLog
@@ -183,7 +184,27 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         return Response(WorkOrderSerializer(ot).data)
 
 
-class WorkOrderPhotoViewSet(viewsets.ModelViewSet):
+class LockedWorkOrderGuardMixin:
+    """Rejects mutations on nested OT resources once the OT is signed or closed.
+
+    Evidence (photos, checklist, spare parts) is part of the record the client
+    signed — it must not change afterwards.
+    """
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.method not in SAFE_METHODS:
+            locked = WorkOrder.objects.filter(
+                pk=self.kwargs["ot_pk"],
+                status__in=[WorkOrder.Status.SIGNED, WorkOrder.Status.CLOSED],
+            ).exists()
+            if locked:
+                raise PermissionDenied(
+                    "Las evidencias de una OT firmada o cerrada no pueden modificarse."
+                )
+
+
+class WorkOrderPhotoViewSet(LockedWorkOrderGuardMixin, viewsets.ModelViewSet):
     """Photos attached to a work order."""
 
     serializer_class = WorkOrderPhotoSerializer
@@ -199,7 +220,7 @@ class WorkOrderPhotoViewSet(viewsets.ModelViewSet):
         )
 
 
-class WorkOrderSparePartViewSet(viewsets.ModelViewSet):
+class WorkOrderSparePartViewSet(LockedWorkOrderGuardMixin, viewsets.ModelViewSet):
     """Spare parts used in a work order."""
 
     serializer_class = WorkOrderSparePartSerializer
@@ -215,7 +236,7 @@ class WorkOrderSparePartViewSet(viewsets.ModelViewSet):
         )
 
 
-class ChecklistExecutionViewSet(viewsets.ModelViewSet):
+class ChecklistExecutionViewSet(LockedWorkOrderGuardMixin, viewsets.ModelViewSet):
     """Checklist items executed during a work order."""
 
     serializer_class = ChecklistExecutionSerializer

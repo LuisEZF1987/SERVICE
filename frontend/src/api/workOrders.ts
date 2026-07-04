@@ -1,5 +1,37 @@
 import api from './client'
 
+export interface WorkOrderPhoto {
+  id: string
+  photo: string
+  photo_type: 'BEFORE' | 'DURING' | 'AFTER'
+  caption: string
+  created_at: string
+}
+
+export interface WorkOrderSparePartUsed {
+  id: string
+  spare_part: string | null
+  description: string
+  code: string
+  quantity: number
+  unit_cost: string | number
+  total_cost: string | number
+}
+
+export interface ChecklistItem {
+  id: string
+  task_name: string
+  frequency: string
+  completed: boolean
+  measured_value: string
+  reference_value: string
+  tolerance: string
+  is_within_tolerance: boolean | null
+  notes: string
+  photo: string | null
+  order: number
+}
+
 export interface WorkOrder {
   id: string
   number: string
@@ -23,16 +55,19 @@ export interface WorkOrder {
   started_at: string | null
   finished_at: string | null
   closed_at: string | null
-  total_hours: number | null
+  total_hours: string | number | null
   reported_problem: string
   diagnosis: string
   work_performed: string
   result: string
   result_display: string
   follow_up_notes: string
-  travel_cost: number
+  travel_cost: string | number
   is_signed_by_client: boolean
-  total_spare_parts_cost: number
+  total_spare_parts_cost: string | number
+  photos: WorkOrderPhoto[]
+  spare_parts_used: WorkOrderSparePartUsed[]
+  checklist_items: ChecklistItem[]
   signed_at: string | null
   client_signer_name: string
   client_signer_position: string
@@ -54,4 +89,22 @@ export const workOrdersApi = {
   sign: (id: string, data: FormData) => api.post<WorkOrder>(`/work-orders/${id}/sign/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   technicianSign: (id: string, data: FormData) => api.post<WorkOrder>(`/work-orders/${id}/technician_sign/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   close: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/close/`),
+
+  // Nested evidence resources (photos, checklist, spare parts)
+  addPhoto: (otId: string, data: FormData) =>
+    api.post<WorkOrderPhoto>(`/work-orders/${otId}/photos/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deletePhoto: (otId: string, photoId: string) =>
+    api.delete(`/work-orders/${otId}/photos/${photoId}/`),
+
+  addChecklistItem: (otId: string, data: Partial<ChecklistItem>) =>
+    api.post<ChecklistItem>(`/work-orders/${otId}/checklist/`, data),
+  updateChecklistItem: (otId: string, itemId: string, data: Partial<ChecklistItem>) =>
+    api.patch<ChecklistItem>(`/work-orders/${otId}/checklist/${itemId}/`, data),
+  deleteChecklistItem: (otId: string, itemId: string) =>
+    api.delete(`/work-orders/${otId}/checklist/${itemId}/`),
+
+  addSparePart: (otId: string, data: Partial<WorkOrderSparePartUsed>) =>
+    api.post<WorkOrderSparePartUsed>(`/work-orders/${otId}/spare-parts/`, data),
+  deleteSparePart: (otId: string, partId: string) =>
+    api.delete(`/work-orders/${otId}/spare-parts/${partId}/`),
 }

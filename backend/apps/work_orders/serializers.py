@@ -7,7 +7,8 @@ class WorkOrderPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkOrderPhoto
         fields = ["id", "work_order", "photo", "photo_type", "caption", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        # work_order comes from the nested URL, not the payload
+        read_only_fields = ["id", "work_order", "created_at"]
 
 
 class WorkOrderSparePartSerializer(serializers.ModelSerializer):
@@ -19,7 +20,8 @@ class WorkOrderSparePartSerializer(serializers.ModelSerializer):
             "id", "work_order", "spare_part", "description",
             "code", "quantity", "unit_cost", "total_cost",
         ]
-        read_only_fields = ["id"]
+        # work_order comes from the nested URL, not the payload
+        read_only_fields = ["id", "work_order"]
 
 
 class ChecklistExecutionSerializer(serializers.ModelSerializer):
@@ -30,7 +32,8 @@ class ChecklistExecutionSerializer(serializers.ModelSerializer):
             "measured_value", "reference_value", "tolerance",
             "is_within_tolerance", "notes", "photo", "order",
         ]
-        read_only_fields = ["id"]
+        # work_order comes from the nested URL, not the payload
+        read_only_fields = ["id", "work_order"]
 
 
 class WorkOrderSerializer(serializers.ModelSerializer):

@@ -117,6 +117,53 @@ class WorkOrderApiTests(TestCase):
         self.assertEqual(resp.status_code, 200, resp.content)
         self.assertEqual(resp.json()["status"], "PENDING_SIGNATURE")
 
+    def test_evidence_locked_once_signed(self):
+        """Checklist/photos/spare parts must be immutable after the client signs."""
+        ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.CORRECTIVE,
+            equipment=self.equipment,
+            client=self.client_org,
+            technician=self.technician,
+            status=WorkOrder.Status.SIGNED,
+        )
+        self.api.force_authenticate(user=self.coordinator)
+        resp = self.api.post(
+            f"/api/v1/work-orders/{ot.id}/checklist/",
+            {"task_name": "Tarea tardía"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 403)
+        resp = self.api.post(
+            f"/api/v1/work-orders/{ot.id}/spare-parts/",
+            {"description": "Repuesto tardío", "quantity": 1, "unit_cost": "10.00"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_evidence_editable_while_in_progress(self):
+        ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.PREVENTIVE,
+            equipment=self.equipment,
+            client=self.client_org,
+            technician=self.technician,
+            status=WorkOrder.Status.IN_PROGRESS,
+        )
+        self.api.force_authenticate(user=self.technician)
+        resp = self.api.post(
+            f"/api/v1/work-orders/{ot.id}/checklist/",
+            {"task_name": "Verificar frenos", "completed": True},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.content)
+        resp = self.api.post(
+            f"/api/v1/work-orders/{ot.id}/spare-parts/",
+            {"description": "Filtro de aire", "code": "FA-01", "quantity": 2, "unit_cost": "15.50"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.content)
+        self.assertEqual(ot.spare_parts_used.count(), 1)
+        self.assertEqual(ot.checklist_items.count(), 1)
+
     def test_technician_only_sees_own_work_orders(self):
         mine = WorkOrder.objects.create(
             ot_type=WorkOrder.Type.CORRECTIVE,
