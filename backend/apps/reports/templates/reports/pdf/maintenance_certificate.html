@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 1.8cm;
+    @bottom-center {
+      content: "DimedService — emitido el {{ generated_at|date:'d/m/Y H:i' }}";
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+  }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10.5pt; color: #1e293b; margin: 0; line-height: 1.55; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1d4ed8; padding-bottom: 12px; margin-bottom: 26px; }
+  .brand { font-size: 17pt; font-weight: 800; color: #0f172a; }
+  .brand span { color: #1d4ed8; }
+  .company-sub { font-size: 8pt; color: #64748b; margin-top: 2px; }
+  .doc-number { font-size: 9pt; color: #475569; text-align: right; }
+  h1 { text-align: center; font-size: 15pt; text-transform: uppercase; letter-spacing: 1.5px; color: #1d4ed8; margin: 26px 0; }
+  .body-text { text-align: justify; margin-bottom: 14px; }
+  .highlight { font-weight: 700; color: #0f172a; }
+  .data-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 18px; margin: 18px 0; }
+  .data-row { display: flex; margin-bottom: 5px; }
+  .data-label { width: 42%; font-size: 8pt; text-transform: uppercase; color: #64748b; letter-spacing: 0.4px; padding-top: 2px; }
+  .data-value { width: 58%; font-size: 10pt; color: #0f172a; font-weight: 600; }
+  .signature { margin-top: 70px; text-align: center; }
+  .sign-line { border-top: 1px solid #334155; width: 260px; margin: 0 auto; padding-top: 6px; font-weight: 700; font-size: 10pt; }
+  .sign-role { font-size: 8pt; color: #64748b; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="brand">Dimed<span>Healthcare</span></div>
+      <div class="company-sub">Servicio Técnico de Equipos Médicos de Imagenología · Ecuador</div>
+    </div>
+    <div class="doc-number">
+      Certificado N.º<br><strong>CERT-{{ ot.number }}</strong>
+    </div>
+  </div>
+
+  <h1>Certificado de Mantenimiento</h1>
+
+  <p class="body-text">
+    <span class="highlight">Dimed Healthcare S.A.</span> certifica que el equipo detallado a
+    continuación, instalado en <span class="highlight">{{ client.name }}</span>
+    ({{ equipment.city }} — {{ equipment.province }}), recibió el servicio de
+    <span class="highlight">{{ ot.get_ot_type_display|lower }}</span> conforme a la Orden de
+    Trabajo <span class="highlight">{{ ot.number }}</span>, ejecutada por el técnico
+    <span class="highlight">{{ ot.technician.get_full_name }}</span>
+    {% if ot.finished_at %}y concluida el <span class="highlight">{{ ot.finished_at|date:"d \d\e F \d\e Y" }}</span>{% endif %}{% if ot.contract %}, bajo el contrato {{ ot.contract.number }}{% endif %}.
+  </p>
+
+  <div class="data-box">
+    <div class="data-row"><div class="data-label">Equipo</div><div class="data-value">{{ equipment.brand }} {{ equipment.model_name }}</div></div>
+    <div class="data-row"><div class="data-label">Modalidad</div><div class="data-value">{{ equipment.get_modality_display }}</div></div>
+    <div class="data-row"><div class="data-label">Número de serie</div><div class="data-value">{{ equipment.serial_number }}</div></div>
+    <div class="data-row"><div class="data-label">Código interno</div><div class="data-value">{{ equipment.internal_code }}</div></div>
+    {% if equipment.hospital_asset_number %}<div class="data-row"><div class="data-label">Activo del hospital</div><div class="data-value">{{ equipment.hospital_asset_number }}</div></div>{% endif %}
+    <div class="data-row"><div class="data-label">Resultado del servicio</div><div class="data-value">{{ ot.get_result_display|default:"—" }}</div></div>
+    {% if ot.total_hours %}<div class="data-row"><div class="data-label">Horas de trabajo</div><div class="data-value">{{ ot.total_hours }} h</div></div>{% endif %}
+    {% if ot.signed_at %}<div class="data-row"><div class="data-label">Recibido y firmado por</div><div class="data-value">{{ ot.client_signer_name }} — {{ ot.client_signer_position }} ({{ ot.signed_at|date:"d/m/Y" }})</div></div>{% endif %}
+    {% if next_maintenance %}<div class="data-row"><div class="data-label">Próximo mantenimiento</div><div class="data-value">{{ next_maintenance.scheduled_date|date:"d/m/Y" }} ({{ next_maintenance.get_frequency_display }})</div></div>{% endif %}
+  </div>
+
+  <p class="body-text">
+    El equipo quedó {% if ot.result == 'RESOLVED' %}<span class="highlight">operativo y en condiciones
+    normales de funcionamiento</span>{% else %}en el estado indicado en la orden de trabajo
+    referida{% endif %} al término del servicio. Este certificado se emite a solicitud del
+    interesado para los fines que estime convenientes.
+  </p>
+
+  <div class="signature">
+    <div class="sign-line">Dimed Healthcare S.A.</div>
+    <div class="sign-role">Servicio Técnico — servicio@dimedhealthcare.com</div>
+  </div>
+</body>
+</html>
