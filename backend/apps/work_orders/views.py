@@ -6,16 +6,19 @@ from rest_framework.response import Response
 
 from apps.accounts.models import AuditLog
 from apps.accounts.utils import create_audit_log
-from common.permissions import IsAdminOrCoordinator, IsTechnician
+from common.permissions import IsAdminOrCoordinator
+
 from .models import ChecklistExecution, WorkOrder, WorkOrderPhoto, WorkOrderSparePart
 from .serializers import (
     ChecklistExecutionSerializer,
     SignWorkOrderSerializer,
+    TechnicianSignWorkOrderSerializer,
     WorkOrderListSerializer,
     WorkOrderPhotoSerializer,
     WorkOrderSerializer,
     WorkOrderSparePartSerializer,
 )
+from .tasks import generate_work_order_pdf, send_work_order_signed_email
 
 
 class WorkOrderViewSet(viewsets.ModelViewSet):
@@ -36,6 +39,8 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             return WorkOrderListSerializer
         if self.action == "sign":
             return SignWorkOrderSerializer
+        if self.action == "technician_sign":
+            return TechnicianSignWorkOrderSerializer
         return WorkOrderSerializer
 
     def get_permissions(self):
@@ -97,6 +102,18 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         return Response(WorkOrderSerializer(ot).data)
 
     @action(detail=True, methods=["post"])
+    def technician_sign(self, request, pk=None):
+        """Capture the assigned technician's signature (rubric) on the OT."""
+        ot = self.get_object()
+        serializer = TechnicianSignWorkOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ot.technician_signature = serializer.validated_data["technician_signature"]
+        ot.technician_signed_at = timezone.now()
+        ot.save(update_fields=["technician_signature", "technician_signed_at"])
+        return Response(WorkOrderSerializer(ot).data)
+
+    @action(detail=True, methods=["post"])
     def sign(self, request, pk=None):
         """Client signs the OT with a rubric."""
         ot = self.get_object()
@@ -131,8 +148,9 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             request=request,
         )
 
-        # TODO: Send email to client with PDF for electronic signature
-        # TODO: Generate PDF automatically
+        # Generate the signed OT PDF and email it to the client's signers
+        # and to Dimed staff (runs async via Celery; eager in local/dev).
+        send_work_order_signed_email.delay(str(ot.id))
 
         return Response(WorkOrderSerializer(ot).data)
 
@@ -159,8 +177,8 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             request=request,
         )
 
-        # TODO: Generate final PDF
-        # TODO: Send PDF via email to client and Dimed admin
+        # Regenerate the final, locked PDF for the closed OT.
+        generate_work_order_pdf.delay(str(ot.id))
 
         return Response(WorkOrderSerializer(ot).data)
 

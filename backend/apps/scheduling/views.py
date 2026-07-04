@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from common.permissions import IsAdminOrCoordinator
+
 from .models import ScheduledMaintenance
 from .serializers import ScheduledMaintenanceListSerializer, ScheduledMaintenanceSerializer
 

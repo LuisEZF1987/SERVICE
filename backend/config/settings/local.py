@@ -19,3 +19,8 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Use local file storage in development instead of MinIO
 DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+
+# Run Celery tasks synchronously in development (no separate worker required),
+# so the OT PDF + email flow works end-to-end when testing locally.
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True

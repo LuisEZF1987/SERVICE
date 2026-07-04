@@ -1,12 +1,13 @@
 """Seed initial catalog data."""
 import os
+
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 django.setup()
 
-from apps.equipment.catalog_models import EquipmentModel, EquipmentSeries, Manufacturer
 from apps.accounts.models import User
+from apps.equipment.catalog_models import EquipmentModel, EquipmentSeries, Manufacturer
 
 admin = User.objects.get(username="admin")
 

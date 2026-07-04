@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import Badge, { StatusBadge, PriorityBadge } from '../../components/ui/Badge'
 import { Select, Textarea } from '../../components/ui/Input'
 import WorkOrderFormModal from './WorkOrderFormModal'
+import SignWorkOrderModal from './SignWorkOrderModal'
 
 const RESULT_OPTIONS = [
   { value: 'RESOLVED', label: 'Resuelto' },
@@ -30,11 +31,6 @@ function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return '\u2014'
   const d = new Date(dateStr)
   return `${d.toLocaleDateString('es-EC')} ${d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}`
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '\u2014'
-  return new Date(dateStr).toLocaleDateString('es-EC')
 }
 
 /** Small label + value info field */
@@ -92,6 +88,7 @@ export default function WorkOrderDetailPage() {
   const { user } = useAuth()
 
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [signMode, setSignMode] = useState<'client' | 'technician' | null>(null)
   const [diagnosis, setDiagnosis] = useState('')
   const [workPerformed, setWorkPerformed] = useState('')
   const [closeResult, setCloseResult] = useState('RESOLVED')
@@ -173,6 +170,26 @@ export default function WorkOrderDetailPage() {
   const actionButtons = () => {
     const buttons: React.ReactNode[] = []
 
+    if (workOrder.pdf_document) {
+      buttons.push(
+        <a
+          key="pdf"
+          href={workOrder.pdf_document}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[0.8rem] font-semibold px-3.5 py-2 rounded-lg transition-colors"
+          style={{ background: 'rgba(96,165,250,0.1)', color: 'var(--accent)', border: '1px solid rgba(96,165,250,0.2)' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          PDF
+        </a>
+      )
+    }
+
     if (status === 'OPEN') {
       buttons.push(
         <Button
@@ -205,6 +222,39 @@ export default function WorkOrderDetailPage() {
           }
         >
           {finishMutation.isPending ? 'Finalizando...' : 'Finalizar Trabajo'}
+        </Button>
+      )
+      buttons.push(
+        <Button
+          key="tech-sign"
+          variant="secondary"
+          onClick={() => setSignMode('technician')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          }
+        >
+          Firmar (técnico)
+        </Button>
+      )
+    }
+
+    if (status === 'PENDING_SIGNATURE') {
+      buttons.push(
+        <Button
+          key="client-sign"
+          variant="success"
+          onClick={() => setSignMode('client')}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          }
+        >
+          Firmar (cliente)
         </Button>
       )
     }
@@ -337,9 +387,6 @@ export default function WorkOrderDetailPage() {
               </InfoField>
               <InfoField label="Prioridad">
                 <PriorityBadge priority={workOrder.priority} />
-              </InfoField>
-              <InfoField label="Empresa Ejecutora">
-                {workOrder.executing_company === 'DIMED' ? 'Dimed Healthcare' : 'Viat'}
               </InfoField>
               <InfoField label="Fecha de Apertura">{formatDateTime(workOrder.opened_at)}</InfoField>
               <InfoField label="Fecha de Cierre">{formatDateTime(workOrder.closed_at)}</InfoField>
@@ -589,6 +636,14 @@ export default function WorkOrderDetailPage() {
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         workOrder={workOrder}
+      />
+
+      {/* Signature Modal */}
+      <SignWorkOrderModal
+        open={signMode !== null}
+        mode={signMode ?? 'client'}
+        onClose={() => setSignMode(null)}
+        workOrderId={workOrder.id}
       />
     </div>
   )

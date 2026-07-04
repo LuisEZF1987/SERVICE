@@ -9,6 +9,9 @@ DEBUG = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_SSL_REDIRECT = True
+# Trust the reverse proxy's X-Forwarded-Proto header (TLS terminates at the proxy),
+# so SSL redirect and HSTS work without a redirect loop.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
@@ -19,9 +22,9 @@ X_FRAME_OPTIONS = "DENY"
 # S3 storage in production
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-# Email via SendGrid
-EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
-SENDGRID_API_KEY = env("SENDGRID_API_KEY")  # noqa: F405
+# Email via SendGrid SMTP relay (EMAIL_HOST / USER / PASSWORD set in base.py).
+# EMAIL_HOST_PASSWORD reads SENDGRID_API_KEY; EMAIL_HOST_USER is the literal "apikey".
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Logging
 LOGGING = {
@@ -34,15 +37,15 @@ LOGGING = {
         },
     },
     "handlers": {
-        "file": {
+        # Log to stdout/stderr so container logs are captured by `docker logs`.
+        "console": {
             "level": "WARNING",
-            "class": "logging.FileHandler",
-            "filename": "/var/log/dimedservice/django.log",
+            "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
     },
     "root": {
-        "handlers": ["file"],
+        "handlers": ["console"],
         "level": "WARNING",
     },
 }

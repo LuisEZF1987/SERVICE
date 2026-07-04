@@ -9,7 +9,6 @@ export interface WorkOrder {
   priority_display: string
   status: string
   status_display: string
-  executing_company: string
   equipment: string
   equipment_code: string
   equipment_description: string
@@ -34,6 +33,12 @@ export interface WorkOrder {
   travel_cost: number
   is_signed_by_client: boolean
   total_spare_parts_cost: number
+  signed_at: string | null
+  client_signer_name: string
+  client_signer_position: string
+  technician_signed_at: string | null
+  pdf_document: string | null
+  signature_email_sent: boolean
   created_at: string
   updated_at: string
 }
@@ -47,5 +52,6 @@ export const workOrdersApi = {
   start: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/start/`),
   finish: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/finish/`),
   sign: (id: string, data: FormData) => api.post<WorkOrder>(`/work-orders/${id}/sign/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  technicianSign: (id: string, data: FormData) => api.post<WorkOrder>(`/work-orders/${id}/technician_sign/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   close: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/close/`),
 }

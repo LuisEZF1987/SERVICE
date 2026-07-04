@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -48,7 +49,6 @@ LOCAL_APPS = [
     "apps.contracts",
     "apps.spare_parts",
     "apps.reports",
-    "apps.billing",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -63,7 +63,6 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.accounts.middleware.AuditLogMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -92,9 +91,17 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": env("POSTGRES_DB", default="dimedservice"),
         "USER": env("POSTGRES_USER", default="dimed"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="dimed_dev_2026"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
         "HOST": env("POSTGRES_HOST", default="db"),
         "PORT": env("POSTGRES_PORT", default="5432"),
+    }
+}
+
+# Cache (Redis) — also backs API throttling consistently across workers
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("REDIS_CACHE_URL", default="redis://redis:6379/1"),
     }
 }
 
@@ -146,6 +153,9 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.BrowsableAPIRenderer",
     ),
     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S%z",
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+    },
 }
 
 # JWT
@@ -171,6 +181,16 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Periodic tasks (file-based schedule; run with `celery -A config beat`).
+CELERY_BEAT_SCHEDULE = {
+    "process-maintenance-schedule": {
+        # Daily at 07:00 (project timezone): send 30/15/7/1-day reminders
+        # and flag overdue preventive maintenances.
+        "task": "apps.scheduling.tasks.process_maintenance_schedule",
+        "schedule": crontab(hour=7, minute=0),
+    },
+}
+
 # Session expiration (30 min inactivity)
 SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
@@ -180,8 +200,8 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 
 # MinIO / S3 Storage
-AWS_ACCESS_KEY_ID = env("MINIO_ROOT_USER", default="dimedminio")
-AWS_SECRET_ACCESS_KEY = env("MINIO_ROOT_PASSWORD", default="dimedminio2026")
+AWS_ACCESS_KEY_ID = env("MINIO_ROOT_USER")
+AWS_SECRET_ACCESS_KEY = env("MINIO_ROOT_PASSWORD")
 AWS_STORAGE_BUCKET_NAME = env("MINIO_BUCKET_NAME", default="dimedservice")
 AWS_S3_ENDPOINT_URL = f"http://{env('MINIO_ENDPOINT', default='minio:9000')}"
 AWS_S3_USE_SSL = env.bool("MINIO_USE_SSL", default=False)
@@ -189,12 +209,13 @@ AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = True
 
-# Email
+# Email (SendGrid SMTP relay — used in production; local overrides to console)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="servicio@dimedhealthcare.com")
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.sendgrid.net")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="apikey")
+EMAIL_HOST_PASSWORD = env("SENDGRID_API_KEY", default="")
 
 # Claude API
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
-
-# Datil (Facturación electrónica)
-DATIL_API_KEY = env("DATIL_API_KEY", default="")
-DATIL_ENVIRONMENT = env("DATIL_ENVIRONMENT", default="sandbox")

@@ -16,7 +16,6 @@ class User(AbstractUser):
 
     class CompanyType(models.TextChoices):
         DIMED = "DIMED", "Dimed Healthcare"
-        VIAT = "VIAT", "Viat"
         CLIENT = "CLIENT", "Cliente"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -1,10 +1,11 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from apps.work_orders.models import WorkOrder
-from apps.equipment.models import Equipment
-from apps.contracts.models import Contract
+
 from apps.clients.models import Client
+from apps.contracts.models import Contract
+from apps.equipment.models import Equipment
+from apps.work_orders.models import WorkOrder
 
 
 @api_view(['GET'])

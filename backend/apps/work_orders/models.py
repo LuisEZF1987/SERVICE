@@ -9,7 +9,8 @@ from common.models import BaseModel
 class WorkOrder(BaseModel):
     """
     Digital Work Order (OT) — the central document of DimedService.
-    A signed OT is the ONLY document that enables payment to Viat.
+    A client-signed OT is the official record certifying that the service
+    was performed, and the source document for billing the client.
     """
 
     class Type(models.TextChoices):
@@ -37,10 +38,6 @@ class WorkOrder(BaseModel):
         FOLLOW_UP = "FOLLOW_UP", "Seguimiento"
         NOT_RESOLVED = "NOT_RESOLVED", "No resuelto"
 
-    class ExecutingCompany(models.TextChoices):
-        VIAT = "VIAT", "Viat"
-        DIMED = "DIMED", "Dimed Healthcare"
-
     # Header
     number = models.CharField(
         "Número de OT", max_length=20, unique=True, editable=False
@@ -53,10 +50,6 @@ class WorkOrder(BaseModel):
     )
     status = models.CharField(
         "Estado", max_length=20, choices=Status.choices, default=Status.OPEN
-    )
-    executing_company = models.CharField(
-        "Empresa ejecutora", max_length=10, choices=ExecutingCompany.choices,
-        default=ExecutingCompany.VIAT
     )
 
     # Equipment & Client

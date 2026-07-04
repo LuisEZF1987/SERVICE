@@ -1,0 +1,17 @@
+Estimado(a),
+
+Se adjunta en PDF la Orden de Trabajo {{ ot.number }}, correspondiente al equipo
+{{ ot.equipment.internal_code }} - {{ ot.equipment.brand }} {{ ot.equipment.model_name }}
+del cliente {{ ot.client.name }}.
+
+Tipo de servicio: {{ ot.get_ot_type_display }}
+Estado: {{ ot.get_status_display }}
+Tecnico responsable: {{ ot.technician.get_full_name }}
+{% if ot.signed_at %}Firmada por: {{ ot.client_signer_name }} ({{ ot.client_signer_position }}) el {{ ot.signed_at|date:"d/m/Y H:i" }}
+{% endif %}
+Este documento certifica el servicio tecnico realizado por Dimed Healthcare S.A.
+
+--
+Dimed Healthcare S.A.
+Servicio Tecnico de Equipos Medicos
+servicio@dimedhealthcare.com

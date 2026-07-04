@@ -84,7 +84,7 @@ const reports: ReportDef[] = [
 
 export default function ReportsPage() {
   const handleGenerate = (title: string) => {
-    toast('Reporte en desarrollo', {
+    toast(`Reporte "${title}" en desarrollo`, {
       icon: '\uD83D\uDEE0\uFE0F',
       style: {
         background: '#1e293b',

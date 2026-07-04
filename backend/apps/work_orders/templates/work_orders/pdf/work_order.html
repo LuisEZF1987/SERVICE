@@ -1,0 +1,219 @@
+{% load tz %}<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 1.5cm 1.4cm 1.8cm 1.4cm;
+    @bottom-center {
+      content: "Documento generado por DimedService — página " counter(page) " de " counter(pages);
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #1d4ed8;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .brand { font-size: 17pt; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+  .brand span { color: #1d4ed8; }
+  .company-sub { font-size: 8pt; color: #64748b; margin-top: 2px; }
+  .doc-meta { text-align: right; }
+  .doc-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; color: #1d4ed8; }
+  .doc-number { font-size: 15pt; font-weight: 800; color: #0f172a; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 7.5pt; font-weight: 700; text-transform: uppercase;
+    background: #e0e7ff; color: #1d4ed8; margin-top: 3px;
+  }
+  .badge.closed { background: #e2e8f0; color: #475569; }
+  .badge.signed { background: #dcfce7; color: #15803d; }
+  .section { margin-bottom: 12px; }
+  .section-title {
+    font-size: 8.5pt; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.6px; color: #1d4ed8;
+    border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin-bottom: 6px;
+  }
+  .grid { display: flex; flex-wrap: wrap; }
+  .field { width: 33.33%; padding: 2px 6px 5px 0; }
+  .field.half { width: 50%; }
+  .field.full { width: 100%; }
+  .label { font-size: 7pt; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.4px; }
+  .value { font-size: 9.5pt; color: #0f172a; }
+  .textblock { white-space: pre-wrap; font-size: 9pt; color: #334155; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th {
+    background: #f1f5f9; font-size: 7.5pt; text-transform: uppercase;
+    color: #475569; text-align: left; padding: 4px 6px; border-bottom: 1px solid #cbd5e1;
+  }
+  td { font-size: 8.5pt; padding: 4px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  .ok { color: #15803d; font-weight: 700; }
+  .fail { color: #b91c1c; font-weight: 700; }
+  .signatures { display: flex; justify-content: space-between; margin-top: 26px; }
+  .sign-box { width: 46%; text-align: center; }
+  .sign-img { height: 55px; object-fit: contain; margin-bottom: 2px; }
+  .sign-line { border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px; }
+  .sign-name { font-weight: 700; font-size: 9pt; }
+  .sign-role { font-size: 7.5pt; color: #64748b; }
+  .muted { color: #94a3b8; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="brand">Dimed<span>Healthcare</span></div>
+      <div class="company-sub">Servicio Técnico de Equipos Médicos de Imagenología · Ecuador</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-title">Orden de Trabajo</div>
+      <div class="doc-number">{{ ot.number }}</div>
+      <div class="badge {% if ot.status == 'CLOSED' %}closed{% elif ot.status == 'SIGNED' %}signed{% endif %}">
+        {{ ot.get_status_display }}
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Datos del Servicio</div>
+    <div class="grid">
+      <div class="field"><div class="label">Tipo</div><div class="value">{{ ot.get_ot_type_display }}</div></div>
+      <div class="field"><div class="label">Prioridad</div><div class="value">{{ ot.get_priority_display }}</div></div>
+      <div class="field"><div class="label">Técnico responsable</div><div class="value">{{ technician.get_full_name|default:"—" }}</div></div>
+      {% if contract %}<div class="field"><div class="label">Contrato</div><div class="value">{{ contract.number }}</div></div>{% endif %}
+      <div class="field"><div class="label">Resultado</div><div class="value">{{ ot.get_result_display|default:"—" }}</div></div>
+      <div class="field"><div class="label">Horas totales</div><div class="value">{% if ot.total_hours %}{{ ot.total_hours }} h{% else %}—{% endif %}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Cliente</div>
+    <div class="grid">
+      <div class="field half"><div class="label">Institución</div><div class="value">{{ client.name }}</div></div>
+      <div class="field"><div class="label">RUC</div><div class="value">{{ client.ruc }}</div></div>
+      <div class="field full"><div class="label">Dirección</div><div class="value">{{ client.address }}, {{ client.city }} — {{ client.province }}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Equipo</div>
+    <div class="grid">
+      <div class="field"><div class="label">Código interno</div><div class="value">{{ equipment.internal_code }}</div></div>
+      <div class="field"><div class="label">Serie</div><div class="value">{{ equipment.serial_number }}</div></div>
+      <div class="field"><div class="label">Modalidad</div><div class="value">{{ equipment.get_modality_display }}</div></div>
+      <div class="field"><div class="label">Marca / Modelo</div><div class="value">{{ equipment.brand }} {{ equipment.model_name }}</div></div>
+      <div class="field"><div class="label">N.º de activo</div><div class="value">{{ equipment.hospital_asset_number|default:"—" }}</div></div>
+      <div class="field"><div class="label">Ubicación</div><div class="value">{{ equipment.area|default:"—" }}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Registro de Tiempos</div>
+    <div class="grid">
+      <div class="field"><div class="label">Apertura</div><div class="value">{{ ot.opened_at|date:"d/m/Y H:i" }}</div></div>
+      <div class="field"><div class="label">Llegada</div><div class="value">{{ ot.arrival_at|date:"d/m/Y H:i"|default:"—" }}</div></div>
+      <div class="field"><div class="label">Inicio</div><div class="value">{{ ot.started_at|date:"d/m/Y H:i"|default:"—" }}</div></div>
+      <div class="field"><div class="label">Fin</div><div class="value">{{ ot.finished_at|date:"d/m/Y H:i"|default:"—" }}</div></div>
+      <div class="field"><div class="label">Cierre</div><div class="value">{{ ot.closed_at|date:"d/m/Y H:i"|default:"—" }}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Descripción Técnica</div>
+    <div class="field full"><div class="label">Problema reportado</div><div class="textblock">{{ ot.reported_problem|default:"—" }}</div></div>
+    <div class="field full"><div class="label">Diagnóstico</div><div class="textblock">{{ ot.diagnosis|default:"—" }}</div></div>
+    <div class="field full"><div class="label">Trabajo realizado</div><div class="textblock">{{ ot.work_performed|default:"—" }}</div></div>
+    {% if ot.follow_up_notes %}<div class="field full"><div class="label">Notas de seguimiento</div><div class="textblock">{{ ot.follow_up_notes }}</div></div>{% endif %}
+  </div>
+
+  {% if checklist_items %}
+  <div class="section">
+    <div class="section-title">Checklist Ejecutado</div>
+    <table>
+      <thead>
+        <tr><th>Tarea</th><th>Medido</th><th>Referencia</th><th>Tolerancia</th><th>Estado</th></tr>
+      </thead>
+      <tbody>
+        {% for item in checklist_items %}
+        <tr>
+          <td>{{ item.task_name }}{% if item.notes %}<br><span class="muted">{{ item.notes }}</span>{% endif %}</td>
+          <td>{{ item.measured_value|default:"—" }}</td>
+          <td>{{ item.reference_value|default:"—" }}</td>
+          <td>{{ item.tolerance|default:"—" }}</td>
+          <td>
+            {% if item.is_within_tolerance is True %}<span class="ok">OK</span>
+            {% elif item.is_within_tolerance is False %}<span class="fail">Fuera</span>
+            {% elif item.completed %}<span class="ok">Hecho</span>
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if spare_parts %}
+  <div class="section">
+    <div class="section-title">Repuestos Utilizados</div>
+    <table>
+      <thead>
+        <tr><th>Descripción</th><th>Código</th><th>Cant.</th><th>Costo unit.</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        {% for sp in spare_parts %}
+        <tr>
+          <td>{{ sp.description }}</td>
+          <td>{{ sp.code|default:"—" }}</td>
+          <td>{{ sp.quantity }}</td>
+          <td>${{ sp.unit_cost }}</td>
+          <td>${{ sp.total_cost }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td colspan="4" style="text-align:right; font-weight:700;">Total repuestos</td>
+          <td style="font-weight:700;">${{ total_spare_parts_cost }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="signatures">
+    <div class="sign-box">
+      {% if technician_signature_uri %}<img class="sign-img" src="{{ technician_signature_uri }}" alt="Firma técnico">{% endif %}
+      <div class="sign-line">
+        <div class="sign-name">{{ technician.get_full_name|default:"—" }}</div>
+        <div class="sign-role">Técnico Dimed Healthcare{% if ot.technician_signed_at %} · {{ ot.technician_signed_at|date:"d/m/Y H:i" }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="sign-box">
+      {% if client_signature_uri %}<img class="sign-img" src="{{ client_signature_uri }}" alt="Firma cliente">{% endif %}
+      <div class="sign-line">
+        <div class="sign-name">{{ ot.client_signer_name|default:"Pendiente de firma" }}</div>
+        <div class="sign-role">
+          {% if ot.client_signer_position %}{{ ot.client_signer_position }} · {% endif %}{{ client.name }}
+          {% if ot.signed_at %}<br>Firmado: {{ ot.signed_at|date:"d/m/Y H:i" }}{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:7.5pt; margin-top:18px; text-align:center;">
+    Este documento certifica el servicio técnico realizado por Dimed Healthcare S.A.
+    Una orden de trabajo firmada y cerrada constituye el registro oficial e inmutable del servicio.
+  </p>
+</body>
+</html>

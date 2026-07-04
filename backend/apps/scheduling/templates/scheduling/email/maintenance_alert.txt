@@ -1,0 +1,14 @@
+{% if overdue %}MANTENIMIENTO PREVENTIVO VENCIDO{% else %}Recordatorio de mantenimiento preventivo{% endif %}
+
+Equipo: {{ m.equipment.internal_code }} - {{ m.equipment.brand }} {{ m.equipment.model_name }}
+Cliente: {{ m.equipment.client.name }}
+Ubicacion: {{ m.equipment.city }}{% if m.equipment.area %} - {{ m.equipment.area }}{% endif %}
+Fecha programada: {{ m.scheduled_date|date:"d/m/Y" }}
+Frecuencia: {{ m.get_frequency_display }}
+{% if m.contract %}Contrato: {{ m.contract.number }}
+{% endif %}
+{% if overdue %}Este mantenimiento esta VENCIDO. Programe la visita tecnica cuanto antes.{% else %}Faltan {{ days }} dia(s) para el mantenimiento programado. Coordine la visita tecnica con el cliente.{% endif %}
+
+--
+DimedService - Sistema de Servicio Tecnico
+Dimed Healthcare S.A.
