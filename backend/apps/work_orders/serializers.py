@@ -76,6 +76,10 @@ class WorkOrderSerializer(serializers.ModelSerializer):
             "id", "number", "opened_at", "closed_at", "total_hours",
             "pdf_document", "created_at", "updated_at",
         ]
+        extra_kwargs = {
+            # Auto-filled from the equipment in WorkOrder.save() when omitted
+            "client": {"required": False},
+        }
 
     def get_equipment_description(self, obj):
         eq = obj.equipment

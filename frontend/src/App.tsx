@@ -13,6 +13,7 @@ import SchedulingPage from './pages/scheduling/SchedulingPage'
 import SparePartsPage from './pages/spare-parts/SparePartsPage'
 import CatalogPage from './pages/catalog/CatalogPage'
 import ReportsPage from './pages/reports/ReportsPage'
+import UsersPage from './pages/users/UsersPage'
 import MainLayout from './layouts/MainLayout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -58,6 +59,7 @@ export default function App() {
                 <Route path="/spare-parts" element={<SparePartsPage />} />
                 <Route path="/catalog" element={<CatalogPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/users" element={<UsersPage />} />
               </Routes>
             </MainLayout>
           </ProtectedRoute>
