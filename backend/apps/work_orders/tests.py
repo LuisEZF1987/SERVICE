@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.clients.models import Client
 from apps.equipment.models import Equipment
+from apps.scheduling.models import ScheduledMaintenance
 from apps.work_orders.models import WorkOrder
 
 
@@ -163,6 +164,46 @@ class WorkOrderApiTests(TestCase):
         self.assertEqual(resp.status_code, 201, resp.content)
         self.assertEqual(ot.spare_parts_used.count(), 1)
         self.assertEqual(ot.checklist_items.count(), 1)
+
+    def test_create_without_client_autofills_from_equipment(self):
+        """The client can be omitted on create; it derives from the equipment."""
+        self.api.force_authenticate(user=self.coordinator)
+        resp = self.api.post(
+            "/api/v1/work-orders/",
+            {
+                "ot_type": "PREVENTIVE",
+                "priority": "SCHEDULED",
+                "equipment": str(self.equipment.id),
+                "technician": str(self.technician.id),
+                "reported_problem": "Mantenimiento preventivo programado",
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.content)
+        self.assertEqual(resp.json()["client"], str(self.client_org.id))
+
+    def test_close_completes_linked_scheduled_maintenance(self):
+        ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.PREVENTIVE,
+            equipment=self.equipment,
+            client=self.client_org,
+            technician=self.technician,
+            status=WorkOrder.Status.SIGNED,
+            result=WorkOrder.Result.RESOLVED,
+            client_signature="work_orders/signatures/test.png",
+            signed_at=timezone.now(),
+        )
+        sm = ScheduledMaintenance.objects.create(
+            equipment=self.equipment,
+            scheduled_date=timezone.localdate(),
+            frequency=ScheduledMaintenance.Frequency.BIANNUAL,
+            work_order=ot,
+        )
+        self.api.force_authenticate(user=self.coordinator)
+        resp = self.api.post(f"/api/v1/work-orders/{ot.id}/close/")
+        self.assertEqual(resp.status_code, 200, resp.content)
+        sm.refresh_from_db()
+        self.assertEqual(sm.status, ScheduledMaintenance.Status.COMPLETED)
 
     def test_technician_only_sees_own_work_orders(self):
         mine = WorkOrder.objects.create(

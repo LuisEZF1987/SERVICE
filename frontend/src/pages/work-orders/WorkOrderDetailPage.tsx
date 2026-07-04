@@ -395,6 +395,13 @@ export default function WorkOrderDetailPage() {
               </InfoField>
               <InfoField label="Fecha de Apertura">{formatDateTime(workOrder.opened_at)}</InfoField>
               <InfoField label="Fecha de Cierre">{formatDateTime(workOrder.closed_at)}</InfoField>
+              {workOrder.ticket && workOrder.ticket_number && (
+                <InfoField label="Ticket de Origen">
+                  <Link to={`/tickets/${workOrder.ticket}`} style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                    {workOrder.ticket_number}
+                  </Link>
+                </InfoField>
+              )}
             </div>
           </Card>
 

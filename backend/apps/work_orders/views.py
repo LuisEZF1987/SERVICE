@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from apps.accounts.models import AuditLog
 from apps.accounts.utils import create_audit_log
+from apps.scheduling.models import ScheduledMaintenance
 from common.permissions import IsAdminOrCoordinator
 
 from .models import ChecklistExecution, WorkOrder, WorkOrderPhoto, WorkOrderSparePart
@@ -29,7 +30,7 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     """
 
     queryset = WorkOrder.objects.select_related(
-        "equipment", "client", "technician", "contract"
+        "equipment", "client", "technician", "contract", "ticket"
     ).prefetch_related("photos", "spare_parts_used", "checklist_items")
     filterset_fields = ["ot_type", "status", "priority", "technician", "client", "equipment"]
     search_fields = ["number", "equipment__internal_code", "client__name"]
@@ -168,6 +169,11 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         ot.status = WorkOrder.Status.CLOSED
         ot.closed_at = timezone.now()
         ot.save(update_fields=["status", "closed_at"])
+
+        # A closed preventive OT completes its scheduled maintenance entry
+        ot.scheduled_maintenances.update(
+            status=ScheduledMaintenance.Status.COMPLETED
+        )
 
         create_audit_log(
             user=request.user,

@@ -51,6 +51,7 @@ class WorkOrderSerializer(serializers.ModelSerializer):
     technician_name = serializers.CharField(source="technician.get_full_name", read_only=True)
     is_signed_by_client = serializers.BooleanField(read_only=True)
     total_spare_parts_cost = serializers.SerializerMethodField()
+    ticket_number = serializers.CharField(source="ticket.number", read_only=True, default=None)
 
     class Meta:
         model = WorkOrder
@@ -59,7 +60,7 @@ class WorkOrderSerializer(serializers.ModelSerializer):
             "status", "status_display",
             "equipment", "equipment_code", "equipment_description",
             "client", "client_name", "contract", "technician", "technician_name",
-            "template_version",
+            "ticket", "ticket_number", "template_version",
             "opened_at", "arrival_at", "started_at", "finished_at", "closed_at",
             "total_hours",
             "reported_problem", "diagnosis", "work_performed",
@@ -76,6 +77,10 @@ class WorkOrderSerializer(serializers.ModelSerializer):
             "id", "number", "opened_at", "closed_at", "total_hours",
             "pdf_document", "created_at", "updated_at",
         ]
+        extra_kwargs = {
+            # Auto-filled from the equipment in WorkOrder.save() when omitted
+            "client": {"required": False},
+        }
 
     def get_equipment_description(self, obj):
         eq = obj.equipment

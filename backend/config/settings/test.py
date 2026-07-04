@@ -5,9 +5,11 @@ DEBUG = False
 
 # Tasks run inline is NOT wanted in tests; keep them queued (no-op) so the
 # OT flow can be asserted without invoking WeasyPrint or sending email.
-# An in-memory broker keeps tests independent of Redis.
+# In-memory broker AND result backend keep tests fully independent of Redis
+# (.delay() with the redis result backend would try to connect on publish).
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache+memory://"
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 

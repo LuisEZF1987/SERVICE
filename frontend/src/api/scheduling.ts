@@ -20,4 +20,5 @@ export interface ScheduledMaintenance {
 
 export const schedulingApi = {
   list: (params?: Record<string, string>) => api.get<{ results: ScheduledMaintenance[]; count: number }>('/scheduling/', { params }),
+  update: (id: string, data: Partial<ScheduledMaintenance>) => api.patch<ScheduledMaintenance>(`/scheduling/${id}/`, data),
 }

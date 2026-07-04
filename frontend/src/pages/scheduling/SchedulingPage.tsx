@@ -1,11 +1,19 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { schedulingApi, ScheduledMaintenance } from '../../api/scheduling'
+import { workOrdersApi } from '../../api/workOrders'
+import { usersApi } from '../../api/users'
+import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
 import Table from '../../components/ui/Table'
 import Badge from '../../components/ui/Badge'
 import { StatusBadge } from '../../components/ui/Badge'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
+import { Select } from '../../components/ui/Input'
 
 // --- Constants ---
 
@@ -28,7 +36,14 @@ function formatDate(iso: string): string {
 // --- Component ---
 
 export default function SchedulingPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('')
+  const [generateFor, setGenerateFor] = useState<ScheduledMaintenance | null>(null)
+  const [technician, setTechnician] = useState('')
+
+  const canManage = user?.role === 'ADMIN' || user?.role === 'COORDINATOR'
 
   const { data: maintenances, isLoading } = useQuery({
     queryKey: ['scheduling', statusFilter],
@@ -39,6 +54,53 @@ export default function SchedulingPage() {
     },
     select: (res) => res.data.results,
   })
+
+  const { data: techniciansData } = useQuery({
+    queryKey: ['technicians-list'],
+    queryFn: () => usersApi.list({ role: 'TECHNICIAN', is_active: 'true' }).then((r) => r.data),
+    enabled: generateFor !== null,
+  })
+
+  const technicianOptions = (techniciansData?.results ?? []).map((t) => ({
+    value: t.id,
+    label: t.full_name || t.username,
+  }))
+
+  const closeGenerateModal = () => {
+    setGenerateFor(null)
+    setTechnician('')
+  }
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const m = generateFor!
+      const res = await workOrdersApi.create({
+        ot_type: 'PREVENTIVE',
+        priority: 'SCHEDULED',
+        equipment: m.equipment,
+        technician,
+        reported_problem: `Mantenimiento preventivo programado para el ${formatDate(m.scheduled_date)} (${m.frequency_display || m.frequency}).`,
+      })
+      await schedulingApi.update(m.id, { work_order: res.data.id })
+      return res.data
+    },
+    onSuccess: (ot) => {
+      queryClient.invalidateQueries({ queryKey: ['scheduling'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+      toast.success(`OT ${ot.number} generada`)
+      closeGenerateModal()
+      navigate(`/work-orders/${ot.id}`)
+    },
+    onError: () => toast.error('Error al generar la OT'),
+  })
+
+  const handleGenerate = () => {
+    if (!technician) {
+      toast.error('Selecciona el técnico asignado')
+      return
+    }
+    generateMutation.mutate()
+  }
 
   // Table columns
   const columns = [
@@ -92,6 +154,17 @@ export default function SchedulingPage() {
             >
               {m.work_order_number}
             </a>
+          )
+        }
+        if (canManage && (m.status === 'PENDING' || m.status === 'OVERDUE')) {
+          return (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setGenerateFor(m)}
+            >
+              Generar OT
+            </Button>
           )
         }
         return <span style={{ color: 'var(--muted)' }}>--</span>
@@ -163,9 +236,9 @@ export default function SchedulingPage() {
             </h3>
             <p className="text-[0.82rem] leading-relaxed" style={{ color: 'var(--muted)' }}>
               Las alertas se envian automaticamente por email a 30, 15, 7 y 1 dia antes del vencimiento
-              de cada mantenimiento programado. Se notifica a los contactos del cliente marcados como
-              principales y al administrador de Dimed. Las direcciones de correo provienen de los
-              contactos registrados en la ficha de cada cliente.
+              de cada mantenimiento programado, y los mantenimientos vencidos se marcan y notifican.
+              Se notifica a los administradores y coordinadores de Dimed para coordinar la visita
+              tecnica con el cliente.
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               {[30, 15, 7, 1].map((days) => (
@@ -203,6 +276,41 @@ export default function SchedulingPage() {
           </div>
         </div>
       </Card>
+
+      {/* Generate OT Modal */}
+      <Modal
+        open={generateFor !== null}
+        onClose={closeGenerateModal}
+        title={`Generar OT Preventiva — ${generateFor?.equipment_code ?? ''}`}
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeGenerateModal} disabled={generateMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button onClick={handleGenerate} disabled={generateMutation.isPending}>
+              {generateMutation.isPending ? 'Generando...' : 'Generar OT'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[0.84rem] mb-4" style={{ color: '#94a3b8' }}>
+          Se creará una OT preventiva para{' '}
+          <strong style={{ color: '#f1f5f9' }}>
+            {generateFor?.equipment_code} — {generateFor?.equipment_description}
+          </strong>{' '}
+          ({generateFor?.client_name}), programada para el{' '}
+          <strong style={{ color: '#f1f5f9' }}>
+            {generateFor ? formatDate(generateFor.scheduled_date) : ''}
+          </strong>
+          , y quedará vinculada a este mantenimiento.
+        </p>
+        <Select
+          label="Técnico asignado"
+          options={technicianOptions}
+          value={technician}
+          onChange={(e) => setTechnician(e.target.value)}
+        />
+      </Modal>
     </div>
   )
 }

@@ -47,6 +47,8 @@ export interface WorkOrder {
   client: string
   client_name: string
   contract: string | null
+  ticket: string | null
+  ticket_number: string | null
   technician: string
   technician_name: string
   template_version: string | null
