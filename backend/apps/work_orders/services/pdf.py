@@ -6,6 +6,7 @@ URIs so rendering works identically with local storage (dev) and S3 (prod),
 without WeasyPrint needing filesystem or network access to the media backend.
 """
 import base64
+import io
 import mimetypes
 
 from django.template.loader import render_to_string
@@ -33,10 +34,50 @@ def image_data_uri(field):
     return f"data:{mime};base64,{encoded}"
 
 
+def photo_thumbnail_data_uri(field, max_px=900, quality=70):
+    """Downscale a photo and return it as a JPEG data URI.
+
+    Evidence photos from phones can be several MB each; embedding them raw
+    would balloon the PDF. Returns None if the image is missing or unreadable.
+    """
+    if not field:
+        return None
+    try:
+        from PIL import Image
+
+        field.open("rb")
+        try:
+            img = Image.open(field)
+            img.load()
+        finally:
+            field.close()
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        img.thumbnail((max_px, max_px))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality)
+    except (OSError, ValueError):
+        return None
+    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
+
+
 def build_work_order_context(work_order):
     """Build the template context for the work order PDF."""
     spare_parts = list(work_order.spare_parts_used.all())
+    photos = []
+    for p in work_order.photos.all():
+        uri = photo_thumbnail_data_uri(p.photo)
+        if uri:
+            photos.append(
+                {
+                    "uri": uri,
+                    "type_display": p.get_photo_type_display(),
+                    "caption": p.caption,
+                }
+            )
     return {
+        "photos": photos,
         "ot": work_order,
         "equipment": work_order.equipment,
         "client": work_order.client,

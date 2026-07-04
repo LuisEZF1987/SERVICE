@@ -26,7 +26,7 @@ urlpatterns = [
     path(
         "<uuid:ot_pk>/spare-parts/<uuid:pk>/",
         views.WorkOrderSparePartViewSet.as_view(
-            {"get": "retrieve", "put": "update", "delete": "destroy"}
+            {"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}
         ),
         name="ot-spare-parts-detail",
     ),
@@ -38,7 +38,7 @@ urlpatterns = [
     path(
         "<uuid:ot_pk>/checklist/<uuid:pk>/",
         views.ChecklistExecutionViewSet.as_view(
-            {"get": "retrieve", "put": "update", "patch": "partial_update"}
+            {"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}
         ),
         name="ot-checklist-detail",
     ),

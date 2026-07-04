@@ -11,6 +11,9 @@ import Badge, { StatusBadge, PriorityBadge } from '../../components/ui/Badge'
 import { Select, Textarea } from '../../components/ui/Input'
 import WorkOrderFormModal from './WorkOrderFormModal'
 import SignWorkOrderModal from './SignWorkOrderModal'
+import WorkOrderChecklistSection from './WorkOrderChecklistSection'
+import WorkOrderSparePartsSection from './WorkOrderSparePartsSection'
+import WorkOrderPhotosSection from './WorkOrderPhotosSection'
 
 const RESULT_OPTIONS = [
   { value: 'RESOLVED', label: 'Resuelto' },
@@ -165,6 +168,8 @@ export default function WorkOrderDetailPage() {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'COORDINATOR'
   const status = workOrder.status
+  // Evidence (photos/checklist/spare parts) is editable until the client signs
+  const evidenceEditable = ['OPEN', 'IN_PROGRESS', 'PENDING_SIGNATURE'].includes(status)
 
   // Build action buttons based on status
   const actionButtons = () => {
@@ -509,6 +514,11 @@ export default function WorkOrderDetailPage() {
               </>
             )}
           </Card>
+
+          {/* Evidencias del servicio */}
+          <WorkOrderChecklistSection workOrder={workOrder} editable={evidenceEditable} />
+          <WorkOrderSparePartsSection workOrder={workOrder} editable={evidenceEditable} />
+          <WorkOrderPhotosSection workOrder={workOrder} editable={evidenceEditable} />
         </div>
 
         {/* Column 3: Sidebar */}
@@ -541,14 +551,14 @@ export default function WorkOrderDetailPage() {
               isActive={status === 'CLOSED'}
             />
 
-            {workOrder.total_hours !== null && workOrder.total_hours > 0 && (
+            {workOrder.total_hours !== null && Number(workOrder.total_hours) > 0 && (
               <div
                 className="mt-4 pt-3"
                 style={{ borderTop: '1px solid var(--card-border)' }}
               >
                 <InfoField label="Horas Totales">
                   <span className="text-lg font-bold" style={{ color: 'var(--accent)' }}>
-                    {workOrder.total_hours.toFixed(1)}h
+                    {Number(workOrder.total_hours).toFixed(1)}h
                   </span>
                 </InfoField>
               </div>
@@ -607,12 +617,12 @@ export default function WorkOrderDetailPage() {
           <Card title="Costos">
             <InfoField label="Costo de Viaje">
               <span style={{ color: '#cbd5e1' }}>
-                ${workOrder.travel_cost?.toFixed(2) ?? '0.00'}
+                ${Number(workOrder.travel_cost ?? 0).toFixed(2)}
               </span>
             </InfoField>
             <InfoField label="Repuestos">
               <span style={{ color: '#cbd5e1' }}>
-                ${workOrder.total_spare_parts_cost?.toFixed(2) ?? '0.00'}
+                ${Number(workOrder.total_spare_parts_cost ?? 0).toFixed(2)}
               </span>
             </InfoField>
             <div
