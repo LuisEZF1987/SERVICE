@@ -102,7 +102,9 @@ class Ticket(BaseModel):
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = self._generate_number()
-        if not self.pk:
+        # UUID pks are assigned before the first save, so check _state.adding
+        # (not self.pk) to detect creation.
+        if self._state.adding:
             # Inherit the contract from the equipment when not set explicitly
             if not self.contract_id and self.equipment_id and self.equipment.contract_id:
                 self.contract = self.equipment.contract
