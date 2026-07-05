@@ -2,6 +2,11 @@ from django.db import models
 
 from common.models import BaseModel
 
+# Register catalog models with the app at load time so cross-app string
+# references like "equipment.EquipmentModel" resolve (they live in a
+# separate module and would otherwise only register when views import them).
+from .catalog_models import EquipmentModel, EquipmentSeries, Manufacturer  # noqa: F401
+
 
 class Equipment(BaseModel):
     """Medical imaging equipment tracked by Dimed."""
