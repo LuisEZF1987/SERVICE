@@ -12,6 +12,8 @@ import mimetypes
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from common.branding import company_logo_data_uri
+
 
 def image_data_uri(field):
     """Read an ImageField/FileField from its storage and return a base64 data URI.
@@ -77,6 +79,7 @@ def build_work_order_context(work_order):
                 }
             )
     return {
+        "logo_uri": company_logo_data_uri(),
         "photos": photos,
         "ot": work_order,
         "equipment": work_order.equipment,

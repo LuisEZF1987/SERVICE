@@ -190,6 +190,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.scheduling.tasks.process_maintenance_schedule",
         "schedule": crontab(hour=7, minute=0),
     },
+    "escalate-overdue-tickets": {
+        # Every 30 minutes: tickets past their contract SLA get escalated
+        # and everyone involved is notified by email.
+        "task": "apps.tickets.tasks.escalate_overdue_tickets",
+        "schedule": crontab(minute="*/30"),
+    },
 }
 
 # Session expiration (30 min inactivity)

@@ -47,6 +47,32 @@ def _client_recipients(ticket):
     return emails
 
 
+@shared_task
+def escalate_overdue_tickets():
+    """Beat job: tickets past their SLA deadline get escalated and notified.
+
+    Runs every 30 minutes. Only touches active tickets (open / in progress);
+    already-escalated, resolved and closed tickets are left alone.
+    """
+    from django.utils import timezone
+
+    from .models import Ticket
+
+    overdue = Ticket.objects.filter(
+        status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS],
+        sla_due_at__lt=timezone.now(),
+    )
+    count = 0
+    for ticket in overdue:
+        ticket.status = Ticket.Status.ESCALATED
+        ticket.save(update_fields=["status"])
+        send_ticket_email.delay(str(ticket.id), "escalated")
+        count += 1
+    if count:
+        logger.info("Escalated %s overdue ticket(s)", count)
+    return count
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_ticket_email(self, ticket_id, event, comment_id=None):
     """Notify staff (and the client, unless internal) about a ticket event."""
