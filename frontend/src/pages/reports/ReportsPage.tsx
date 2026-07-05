@@ -12,7 +12,7 @@ import { Select } from '../../components/ui/Input'
 
 // --- Report definitions ---
 
-type ReportKey = 'certificate' | 'history' | null
+type ReportKey = 'certificate' | 'history' | 'service-report' | null
 
 interface ReportDef {
   key: ReportKey
@@ -22,6 +22,19 @@ interface ReportDef {
 }
 
 const reports: ReportDef[] = [
+  {
+    key: 'service-report',
+    title: 'Informe Técnico de Servicio',
+    description: 'El informe narrativo que se envía al cliente tras la visita',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14,2 14,8 20,8" />
+        <line x1="8" y1="13" x2="16" y2="13" />
+        <line x1="8" y1="17" x2="13" y2="17" />
+      </svg>
+    ),
+  },
   {
     key: 'certificate',
     title: 'Certificado de Mantenimiento',

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 1.8cm 1.6cm;
+    @bottom-center {
+      content: "Informe INF-{{ ot.number }} — Dimed Healthcare S.A. — página " counter(page) " de " counter(pages);
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+  }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; line-height: 1.5; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1d4ed8; padding-bottom: 12px; margin-bottom: 18px; }
+  .brand { font-size: 16pt; font-weight: 800; color: #0f172a; }
+  .brand span { color: #1d4ed8; }
+  .company-sub { font-size: 8pt; color: #64748b; margin-top: 2px; }
+  .doc-meta { text-align: right; font-size: 9pt; color: #475569; }
+  .doc-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; color: #1d4ed8; }
+  .doc-number { font-size: 13pt; font-weight: 800; color: #0f172a; }
+  h2 { font-size: 10.5pt; text-transform: uppercase; letter-spacing: 0.6px; color: #1d4ed8; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin: 16px 0 8px; }
+  .textblock { white-space: pre-wrap; text-align: justify; color: #334155; }
+  .data-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin: 10px 0; }
+  .data-row { display: flex; margin-bottom: 4px; }
+  .data-label { width: 34%; font-size: 7.5pt; text-transform: uppercase; color: #64748b; letter-spacing: 0.4px; padding-top: 2px; }
+  .data-value { width: 66%; font-size: 9.5pt; color: #0f172a; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th { background: #f1f5f9; font-size: 7.5pt; text-transform: uppercase; color: #475569; text-align: left; padding: 4px 6px; border-bottom: 1px solid #cbd5e1; }
+  td { font-size: 8.5pt; padding: 4px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  .ok { color: #15803d; font-weight: 700; }
+  .fail { color: #b91c1c; font-weight: 700; }
+  .muted { color: #94a3b8; }
+  .photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .photo-item { width: 48%; margin-bottom: 8px; }
+  .photo-item img { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; }
+  .photo-caption { font-size: 7.5pt; color: #475569; margin-top: 2px; }
+  .signature { margin-top: 46px; text-align: center; }
+  .sign-img { height: 50px; object-fit: contain; }
+  .sign-line { border-top: 1px solid #334155; width: 260px; margin: 0 auto; padding-top: 6px; font-weight: 700; font-size: 10pt; }
+  .sign-role { font-size: 8pt; color: #64748b; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      {% if logo_uri %}<img src="{{ logo_uri }}" alt="Dimed Healthcare S.A." style="height: 48px;">{% else %}<div class="brand">Dimed<span>Healthcare</span></div>{% endif %}
+      <div class="company-sub">Servicio Técnico de Equipos Médicos de Imagenología · Ecuador</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-title">Informe Técnico de Servicio</div>
+      <div class="doc-number">INF-{{ ot.number }}</div>
+      Emitido: {{ generated_at|date:"d/m/Y" }}
+    </div>
+  </div>
+
+  <div class="data-box">
+    <div class="data-row"><div class="data-label">Cliente</div><div class="data-value">{{ client.name }}</div></div>
+    <div class="data-row"><div class="data-label">Equipo</div><div class="data-value">{{ equipment.brand }} {{ equipment.model_name }} — {{ equipment.get_modality_display }}</div></div>
+    <div class="data-row"><div class="data-label">Serie / Código interno</div><div class="data-value">{{ equipment.serial_number }} / {{ equipment.internal_code }}</div></div>
+    <div class="data-row"><div class="data-label">Ubicación</div><div class="data-value">{{ equipment.area|default:"—" }} · {{ equipment.city }}</div></div>
+    <div class="data-row"><div class="data-label">Tipo de servicio</div><div class="data-value">{{ ot.get_ot_type_display }} (OT {{ ot.number }})</div></div>
+    <div class="data-row"><div class="data-label">Fecha del servicio</div><div class="data-value">{{ ot.started_at|date:"d/m/Y" }}{% if ot.finished_at %} — {{ ot.finished_at|date:"d/m/Y" }}{% endif %}{% if ot.total_hours %} ({{ ot.total_hours }} h){% endif %}</div></div>
+    <div class="data-row"><div class="data-label">Técnico responsable</div><div class="data-value">{{ ot.technician.get_full_name }}</div></div>
+    {% if ot.contract %}<div class="data-row"><div class="data-label">Contrato</div><div class="data-value">{{ ot.contract.number }}</div></div>{% endif %}
+  </div>
+
+  <h2>1. Antecedentes</h2>
+  <div class="textblock">{{ ot.reported_problem|default:"—" }}</div>
+
+  <h2>2. Diagnóstico</h2>
+  <div class="textblock">{{ ot.diagnosis|default:"—" }}</div>
+
+  <h2>3. Trabajos Realizados</h2>
+  <div class="textblock">{{ ot.work_performed|default:"—" }}</div>
+
+  {% if checklist %}
+  <h2>4. Verificaciones y Mediciones ({{ checklist_ok }}/{{ checklist|length }} completadas)</h2>
+  <table>
+    <thead>
+      <tr><th>Verificación</th><th>Medido</th><th>Referencia</th><th>Estado</th></tr>
+    </thead>
+    <tbody>
+      {% for item in checklist %}
+      <tr>
+        <td>{{ item.task_name }}</td>
+        <td>{{ item.measured_value|default:"—" }}</td>
+        <td>{{ item.reference_value|default:"—" }}</td>
+        <td>
+          {% if item.is_within_tolerance is True %}<span class="ok">Dentro de tolerancia</span>
+          {% elif item.is_within_tolerance is False %}<span class="fail">Fuera de tolerancia</span>
+          {% elif item.completed %}<span class="ok">Realizado</span>
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if spare_parts %}
+  <h2>{% if checklist %}5{% else %}4{% endif %}. Repuestos Utilizados</h2>
+  <table>
+    <thead><tr><th>Descripción</th><th>Código</th><th>Cantidad</th></tr></thead>
+    <tbody>
+      {% for sp in spare_parts %}
+      <tr><td>{{ sp.description }}</td><td>{{ sp.code|default:"—" }}</td><td>{{ sp.quantity }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <h2>Conclusiones y Recomendaciones</h2>
+  <div class="textblock">{% if ot.result %}Resultado del servicio: {{ ot.get_result_display }}.{% endif %}
+{% if ot.follow_up_notes %}{{ ot.follow_up_notes }}{% elif ot.result == 'RESOLVED' %}El equipo queda operativo y en condiciones normales de funcionamiento.{% endif %}</div>
+
+  {% if photos %}
+  <h2>Registro Fotográfico</h2>
+  <div class="photo-grid">
+    {% for ph in photos %}
+    <div class="photo-item">
+      <img src="{{ ph.uri }}" alt="Evidencia">
+      <div class="photo-caption"><strong>{{ ph.type_display }}</strong>{% if ph.caption %} — {{ ph.caption }}{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="signature">
+    {% if ot.technician_signature %}{% endif %}
+    <div class="sign-line">{{ ot.technician.get_full_name }}</div>
+    <div class="sign-role">Técnico de Servicio — Dimed Healthcare S.A.<br>servicio@dimedhealthcare.com</div>
+  </div>
+</body>
+</html>
