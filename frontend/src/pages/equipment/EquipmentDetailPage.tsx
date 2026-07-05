@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { equipmentApi } from '../../api/equipment'
 import { manualsApi } from '../../api/manuals'
+import { schedulingApi, ScheduledMaintenance } from '../../api/scheduling'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
@@ -96,12 +97,20 @@ export default function EquipmentDetailPage() {
     enabled: !!id,
   })
 
-  // Technical manuals matching this equipment's brand (staff only)
+  // Technical manuals that apply to THIS equipment (matched via catalog links)
   const { data: manuals } = useQuery({
-    queryKey: ['manuals-for-equipment', equipment?.brand],
+    queryKey: ['manuals-for-equipment', id],
     queryFn: () =>
-      manualsApi.list({ brand: equipment!.brand, page_size: '100' }).then((r) => r.data.results),
-    enabled: isStaff && !!equipment?.brand,
+      manualsApi.list({ for_equipment: id!, page_size: '100' }).then((r) => r.data.results),
+    enabled: isStaff && !!id,
+  })
+
+  // Maintenance schedule for this equipment
+  const { data: schedule } = useQuery({
+    queryKey: ['schedule-for-equipment', id],
+    queryFn: () =>
+      schedulingApi.list({ equipment: id!, page_size: '100' }).then((r) => r.data.results),
+    enabled: !!id,
   })
 
   if (isLoading) {
@@ -277,13 +286,67 @@ export default function EquipmentDetailPage() {
         </Card>
       </div>
 
-      {/* Technical manuals for this brand (staff only) */}
+      {/* Maintenance schedule for this equipment */}
+      <div className="mt-4">
+        <Card title={`Cronograma de Mantenimiento (${schedule?.length ?? 0})`}>
+          {(schedule ?? []).length === 0 && (
+            <div className="text-[0.82rem] py-1" style={{ color: 'var(--muted)' }}>
+              Sin mantenimientos programados para este equipo.
+            </div>
+          )}
+          {(schedule ?? []).length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Fecha programada', 'Frecuencia', 'Estado', 'Orden de Trabajo'].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-wider"
+                        style={{ color: 'var(--muted)', borderBottom: '1px solid var(--card-border)' }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(schedule ?? []).map((m: ScheduledMaintenance) => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td className="px-3 py-2.5 text-[0.84rem]" style={{ color: '#f1f5f9', fontWeight: 600 }}>
+                        {m.scheduled_date.split('-').reverse().join('/')}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <Badge variant="info">{m.frequency_display || m.frequency}</Badge>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <StatusBadge status={m.status} />
+                      </td>
+                      <td className="px-3 py-2.5 text-[0.82rem]">
+                        {m.work_order && m.work_order_number ? (
+                          <Link to={`/work-orders/${m.work_order}`} style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                            {m.work_order_number}
+                          </Link>
+                        ) : (
+                          <span style={{ color: 'var(--muted)' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Technical manuals for this equipment (staff only) */}
       {isStaff && (
         <div className="mt-4">
-          <Card title={`Manuales Técnicos — ${equipment.brand} (${manuals?.length ?? 0})`}>
+          <Card title={`Manuales Técnicos — ${equipment.brand} ${equipment.model_name} (${manuals?.length ?? 0})`}>
             {(manuals ?? []).length === 0 && (
               <div className="text-[0.82rem] py-1" style={{ color: 'var(--muted)' }}>
-                Sin manuales para esta marca.{' '}
+                Sin manuales para este equipo.{' '}
                 <Link to="/manuals" style={{ color: 'var(--accent)' }}>
                   Ir a la biblioteca
                 </Link>
