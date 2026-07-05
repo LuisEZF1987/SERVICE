@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 1.8cm 1.6cm;
+    @bottom-center {
+      content: "Cotización {{ quote.number }} — Dimed Healthcare S.A. — página " counter(page) " de " counter(pages);
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+  }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; line-height: 1.5; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1d4ed8; padding-bottom: 12px; margin-bottom: 16px; }
+  .brand { font-size: 16pt; font-weight: 800; color: #0f172a; }
+  .brand span { color: #1d4ed8; }
+  .company-sub { font-size: 8pt; color: #64748b; margin-top: 2px; }
+  .doc-meta { text-align: right; font-size: 9pt; color: #475569; }
+  .doc-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; color: #1d4ed8; }
+  .doc-number { font-size: 13pt; font-weight: 800; color: #0f172a; }
+  h2 { font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.6px; color: #1d4ed8; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin: 14px 0 8px; }
+  .data-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin: 8px 0; }
+  .data-row { display: flex; margin-bottom: 4px; }
+  .data-label { width: 30%; font-size: 7.5pt; text-transform: uppercase; color: #64748b; letter-spacing: 0.4px; padding-top: 2px; }
+  .data-value { width: 70%; font-size: 9.5pt; color: #0f172a; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th { background: #f1f5f9; font-size: 7.5pt; text-transform: uppercase; color: #475569; text-align: left; padding: 5px 6px; border-bottom: 1px solid #cbd5e1; }
+  td { font-size: 9pt; padding: 5px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  .num { text-align: right; }
+  .totals td { border-bottom: none; padding: 3px 6px; }
+  .totals .grand { font-size: 11pt; font-weight: 800; color: #1d4ed8; border-top: 2px solid #1d4ed8; }
+  .conditions { font-size: 9pt; color: #334155; }
+  .conditions strong { color: #0f172a; }
+  .accept-box { border: 1.5px solid #1d4ed8; border-radius: 8px; padding: 14px 18px; margin-top: 24px; }
+  .accept-title { font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #1d4ed8; margin-bottom: 8px; }
+  .accept-line { border-top: 1px solid #334155; width: 250px; margin-top: 34px; padding-top: 4px; font-size: 8pt; color: #64748b; }
+  .muted { color: #94a3b8; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      {% if logo_uri %}<img src="{{ logo_uri }}" alt="Dimed Healthcare S.A." style="height: 48px;">{% else %}<div class="brand">Dimed<span>Healthcare</span></div>{% endif %}
+      <div class="company-sub">Servicio Técnico de Equipos Médicos de Imagenología · Ecuador</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-title">Cotización</div>
+      <div class="doc-number">{{ quote.number }}</div>
+      Fecha: {{ generated_at|date:"d/m/Y" }}<br>
+      Válida hasta: <strong>{{ quote.valid_until|date:"d/m/Y" }}</strong>
+    </div>
+  </div>
+
+  <div class="data-box">
+    <div class="data-row"><div class="data-label">Cliente</div><div class="data-value">{{ client.name }}</div></div>
+    <div class="data-row"><div class="data-label">RUC</div><div class="data-value">{{ client.ruc }}</div></div>
+    <div class="data-row"><div class="data-label">Dirección</div><div class="data-value">{{ client.address }}, {{ client.city }}</div></div>
+    {% if quote.equipment %}<div class="data-row"><div class="data-label">Equipo</div><div class="data-value">{{ quote.equipment.internal_code }} — {{ quote.equipment.brand }} {{ quote.equipment.model_name }} (S/N {{ quote.equipment.serial_number }})</div></div>{% endif %}
+    <div class="data-row"><div class="data-label">Objeto</div><div class="data-value">{{ quote.title }}</div></div>
+  </div>
+
+  <h2>Detalle de la Cotización</h2>
+  <table>
+    <thead>
+      <tr><th>Descripción</th><th>Código</th><th class="num">Cant.</th><th class="num">P. Unitario</th><th class="num">Total</th></tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.description }}<br><span class="muted" style="font-size:7.5pt;">{{ item.get_kind_display }}</span></td>
+        <td>{{ item.code|default:"—" }}</td>
+        <td class="num">{{ item.quantity }}</td>
+        <td class="num">${{ item.unit_price }}</td>
+        <td class="num">${{ item.total }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <table class="totals">
+    <tr><td style="width:70%"></td><td>Sub-Total</td><td class="num">${{ quote.subtotal }}</td></tr>
+    <tr><td></td><td>IVA {{ quote.iva_rate }}%</td><td class="num">${{ quote.iva_amount }}</td></tr>
+    <tr class="grand"><td></td><td class="grand">TOTAL</td><td class="num grand">${{ quote.total }}</td></tr>
+  </table>
+
+  <h2>Condiciones Comerciales</h2>
+  <div class="conditions">
+    <p><strong>Forma de pago:</strong> {{ quote.payment_terms }}</p>
+    {% if quote.delivery_terms %}<p><strong>Plazo de entrega:</strong> {{ quote.delivery_terms }}</p>{% endif %}
+    {% if quote.warranty_terms %}<p><strong>Garantía:</strong> {{ quote.warranty_terms }}</p>{% endif %}
+    <p><strong>Validez de la oferta:</strong> hasta el {{ quote.valid_until|date:"d/m/Y" }}.</p>
+    {% if quote.notes %}<p><strong>Observaciones:</strong> {{ quote.notes }}</p>{% endif %}
+  </div>
+
+  <div class="accept-box">
+    <div class="accept-title">Aceptación del Cliente</div>
+    <div style="font-size: 9pt; color: #334155;">
+      Acepto la presente cotización y autorizo la ejecución del trabajo, comprometiéndome al
+      pago del anticipo del {{ quote.advance_percent }}% (${{ quote.advance_amount }}) para su inicio.
+    </div>
+    <div class="accept-line">Nombre, cargo, firma y fecha</div>
+  </div>
+</body>
+</html>

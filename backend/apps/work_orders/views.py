@@ -175,6 +175,24 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             status=ScheduledMaintenance.Status.COMPLETED
         )
 
+        # Suite billing (CAJA): balance of an accepted quote, or the
+        # contract's per-visit value for scheduled preventive maintenance.
+        # No-ops unless CAJA_API_URL/CAJA_SERVICE_KEY are configured.
+        from apps.quotes.models import Quote
+        from apps.quotes.tasks import push_contract_visit_charge, push_quote_balance_charge
+
+        quote = ot.quotes.filter(
+            status=Quote.Status.ACCEPTED, advance_paid=True
+        ).first()
+        if quote:
+            push_quote_balance_charge.delay(str(quote.id))
+        elif (
+            ot.contract_id
+            and ot.ot_type == WorkOrder.Type.PREVENTIVE
+            and ot.contract.value_per_visit
+        ):
+            push_contract_visit_charge.delay(str(ot.id))
+
         create_audit_log(
             user=request.user,
             action=AuditLog.Action.APPROVE,
