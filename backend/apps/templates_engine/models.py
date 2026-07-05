@@ -5,7 +5,9 @@ from common.models import BaseModel
 
 
 class TechnicalManual(BaseModel):
-    """Technical manuals uploaded for AI-based template generation."""
+    """Technical documentation library: service/user manuals, datasheets,
+    pre-installation forms, etc. Feeds the technicians in the field and,
+    later, the AI-based template generation."""
 
     class Modality(models.TextChoices):
         XRAY_FIXED = "XRAY_FIXED", "Rayos X Fijo"
@@ -18,22 +20,58 @@ class TechnicalManual(BaseModel):
         DENSITOMETER = "DENSITOMETER", "Densit\u00f3metro"
         OTHER = "OTHER", "Otro"
 
+    class DocumentType(models.TextChoices):
+        SERVICE_MANUAL = "SERVICE_MANUAL", "Manual de servicio"
+        USER_MANUAL = "USER_MANUAL", "Manual de usuario"
+        PRE_INSTALL_FORM = "PRE_INSTALL_FORM", "Formulario de pre-instalaci\u00f3n"
+        PRE_INSTALL_MANUAL = "PRE_INSTALL_MANUAL", "Manual de pre-instalaci\u00f3n"
+        TRAINING = "TRAINING", "Plan de capacitaci\u00f3n"
+        BROCHURE = "BROCHURE", "Cat\u00e1logo / Brochure"
+        DATASHEET = "DATASHEET", "Datasheet"
+        OTHER = "OTHER", "Otro"
+
+    title = models.CharField("T\u00edtulo", max_length=300, blank=True)
+    document_type = models.CharField(
+        "Tipo de documento",
+        max_length=20,
+        choices=DocumentType.choices,
+        default=DocumentType.SERVICE_MANUAL,
+    )
     brand = models.CharField("Marca", max_length=100)
     modality = models.CharField(
         "Modalidad", max_length=20, choices=Modality.choices
     )
     model_name = models.CharField("Modelo", max_length=100)
-    language = models.CharField("Idioma", max_length=50)
+    language = models.CharField("Idioma", max_length=50, blank=True, default="Espa\u00f1ol")
     file = models.FileField("Archivo del manual", upload_to="manuales/")
     notes = models.TextField("Notas", blank=True)
+
+    # Optional links to the equipment catalog (Manufacturer \u2192 Model \u2192 Series)
+    equipment_model = models.ForeignKey(
+        "equipment.EquipmentModel",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="manuals",
+        verbose_name="Modelo del cat\u00e1logo",
+    )
+    equipment_series = models.ForeignKey(
+        "equipment.EquipmentSeries",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="manuals",
+        verbose_name="Serie del cat\u00e1logo",
+    )
 
     class Meta:
         verbose_name = "Manual T\u00e9cnico"
         verbose_name_plural = "Manuales T\u00e9cnicos"
-        ordering = ["brand", "model_name"]
+        ordering = ["brand", "model_name", "document_type"]
 
     def __str__(self):
-        return f"{self.brand} {self.model_name} ({self.get_modality_display()})"
+        label = self.title or f"{self.brand} {self.model_name}"
+        return f"{label} ({self.get_document_type_display()})"
 
 
 class MaintenanceTemplate(BaseModel):

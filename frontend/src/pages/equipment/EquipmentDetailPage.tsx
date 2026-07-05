@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { equipmentApi } from '../../api/equipment'
+import { manualsApi } from '../../api/manuals'
+import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -82,13 +84,24 @@ function WarrantyField({ label, start, end, isActive }: { label: string; start: 
 export default function EquipmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [editModalOpen, setEditModalOpen] = useState(false)
+
+  const isStaff = user?.role !== 'CLIENT'
 
   const { data: equipment, isLoading } = useQuery({
     queryKey: ['equipment-detail', id],
     queryFn: () => equipmentApi.get(id!),
     select: (res) => res.data,
     enabled: !!id,
+  })
+
+  // Technical manuals matching this equipment's brand (staff only)
+  const { data: manuals } = useQuery({
+    queryKey: ['manuals-for-equipment', equipment?.brand],
+    queryFn: () =>
+      manualsApi.list({ brand: equipment!.brand, page_size: '100' }).then((r) => r.data.results),
+    enabled: isStaff && !!equipment?.brand,
   })
 
   if (isLoading) {
@@ -263,6 +276,47 @@ export default function EquipmentDetailPage() {
           </div>
         </Card>
       </div>
+
+      {/* Technical manuals for this brand (staff only) */}
+      {isStaff && (
+        <div className="mt-4">
+          <Card title={`Manuales Técnicos — ${equipment.brand} (${manuals?.length ?? 0})`}>
+            {(manuals ?? []).length === 0 && (
+              <div className="text-[0.82rem] py-1" style={{ color: 'var(--muted)' }}>
+                Sin manuales para esta marca.{' '}
+                <Link to="/manuals" style={{ color: 'var(--accent)' }}>
+                  Ir a la biblioteca
+                </Link>
+              </div>
+            )}
+            {(manuals ?? []).map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between py-2"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <div>
+                  <span className="text-[0.84rem] font-medium" style={{ color: '#f1f5f9' }}>
+                    {m.title || `${m.brand} ${m.model_name}`}
+                  </span>
+                  <span className="ml-2">
+                    <Badge variant="info">{m.document_type_display}</Badge>
+                  </span>
+                </div>
+                <a
+                  href={m.file}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[0.75rem] font-semibold px-3 py-1.5 rounded-lg"
+                  style={{ background: 'rgba(96,165,250,0.1)', color: 'var(--accent)', border: '1px solid rgba(96,165,250,0.2)', textDecoration: 'none' }}
+                >
+                  Abrir
+                </a>
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
 
       <EquipmentFormModal
         open={editModalOpen}
