@@ -7,5 +7,6 @@ router = DefaultRouter()
 router.register(r"", views.ScheduledMaintenanceViewSet)
 
 urlpatterns = [
+    path("export.ics", views.calendar_export, name="scheduling-calendar-export"),
     path("", include(router.urls)),
 ]

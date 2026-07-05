@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { schedulingApi, ScheduledMaintenance } from '../../api/scheduling'
 import { workOrdersApi } from '../../api/workOrders'
 import { usersApi } from '../../api/users'
+import { downloadBlob } from '../../api/reports'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
@@ -172,11 +173,26 @@ export default function SchedulingPage() {
     },
   ]
 
+  const handleExportCalendar = async () => {
+    try {
+      const res = await schedulingApi.exportIcs()
+      downloadBlob(res.data, 'cronograma-dimedservice.ics')
+      toast.success('Calendario exportado — impórtalo en Google Calendar u Outlook')
+    } catch {
+      toast.error('Error al exportar el calendario')
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="Cronograma de Mantenimientos"
         subtitle={maintenances ? `${maintenances.length} mantenimiento${maintenances.length !== 1 ? 's' : ''} programado${maintenances.length !== 1 ? 's' : ''}` : 'Planificacion y seguimiento de mantenimientos preventivos'}
+        actions={
+          <Button variant="secondary" onClick={handleExportCalendar}>
+            Exportar a Calendario (.ics)
+          </Button>
+        }
       />
 
       <div className="flex items-center gap-3 mb-4">

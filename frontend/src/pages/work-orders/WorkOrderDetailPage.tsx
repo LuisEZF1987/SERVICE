@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -102,13 +102,16 @@ export default function WorkOrderDetailPage() {
     queryKey: ['work-order', id],
     queryFn: () => workOrdersApi.get(id!).then((r) => r.data),
     enabled: !!id,
-    // Populate local state on success
-    select: (data) => {
-      if (!diagnosisDirty) setDiagnosis(data.diagnosis || '')
-      if (!workPerformedDirty) setWorkPerformed(data.work_performed || '')
-      return data
-    },
   })
+
+  // Sync editable fields from server data (setting state inside the query's
+  // `select` ran during render and caused an infinite re-render loop, #301).
+  useEffect(() => {
+    if (!workOrder) return
+    if (!diagnosisDirty) setDiagnosis(workOrder.diagnosis || '')
+    if (!workPerformedDirty) setWorkPerformed(workOrder.work_performed || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workOrder])
 
   // Mutations
   const startMutation = useMutation({
