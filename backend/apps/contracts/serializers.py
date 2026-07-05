@@ -15,7 +15,7 @@ class ContractSerializer(serializers.ModelSerializer):
         fields = [
             "id", "number", "contract_type", "contract_type_display",
             "client", "client_name", "sercop_reference",
-            "start_date", "end_date", "total_value", "payment_terms",
+            "start_date", "end_date", "total_value", "value_per_visit", "payment_terms",
             "sla_response_hours", "preventive_visits_per_year",
             "status", "status_display", "document", "notes",
             "created_at", "updated_at",

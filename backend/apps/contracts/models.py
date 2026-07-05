@@ -37,6 +37,15 @@ class Contract(BaseModel):
     total_value = models.DecimalField(
         "Valor total", max_digits=12, decimal_places=2
     )
+    # Amount charged to CAJA when each scheduled preventive visit's OT closes
+    value_per_visit = models.DecimalField(
+        "Valor por visita preventiva",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Monto del cargo a CAJA por cada mantenimiento preventivo del cronograma",
+    )
     payment_terms = models.TextField("Condiciones de pago")
     sla_response_hours = models.PositiveIntegerField(
         "Horas de respuesta SLA"

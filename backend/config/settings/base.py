@@ -45,6 +45,7 @@ LOCAL_APPS = [
     "apps.equipment",
     "apps.templates_engine",
     "apps.tickets",
+    "apps.quotes",
     "apps.work_orders",
     "apps.scheduling",
     "apps.contracts",
@@ -226,3 +227,10 @@ EMAIL_HOST_PASSWORD = env("SENDGRID_API_KEY", default="")
 
 # Claude API
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
+
+# CAJA (hub de facturación de la suite Dimed) — vacío = integración desactivada
+CAJA_API_URL = env("CAJA_API_URL", default="")
+CAJA_SERVICE_KEY = env("CAJA_SERVICE_KEY", default="")
+
+# CRM (aviso opcional de cotizaciones de servicio) — vacío = desactivado
+CRM_WEBHOOK_URL = env("CRM_WEBHOOK_URL", default="")

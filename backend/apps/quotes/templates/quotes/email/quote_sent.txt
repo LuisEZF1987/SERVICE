@@ -1,0 +1,16 @@
+Estimado(a),
+
+Adjuntamos la cotización {{ quote.number }} — {{ quote.title }}.
+
+{% if quote.equipment %}Equipo: {{ quote.equipment.internal_code }} - {{ quote.equipment.brand }} {{ quote.equipment.model_name }}
+{% endif %}Total: ${{ quote.total }} (incluye IVA {{ quote.iva_rate }}%)
+Anticipo para iniciar: {{ quote.advance_percent }}% (${{ quote.advance_amount }})
+Validez: hasta el {{ quote.valid_until|date:"d/m/Y" }}
+
+Para aceptar la oferta, responda este correo indicando el numero de cotizacion
+{{ quote.number }} o comuniquese con nosotros.
+
+--
+Dimed Healthcare S.A.
+Servicio Tecnico de Equipos Medicos
+servicio@dimedhealthcare.com
