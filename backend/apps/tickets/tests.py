@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
@@ -9,7 +10,7 @@ from apps.clients.models import Client
 from apps.contracts.models import Contract
 from apps.equipment.models import Equipment
 from apps.tickets.models import Ticket, TicketComment
-from apps.tickets.tasks import send_ticket_email
+from apps.tickets.tasks import escalate_overdue_tickets, send_ticket_email
 
 
 def make_fixtures():
@@ -159,6 +160,36 @@ class TicketApiTests(TestCase):
         self.assertEqual(resp.status_code, 201, resp.content)
         comment = TicketComment.objects.get(pk=resp.json()["id"])
         self.assertFalse(comment.is_internal)
+
+
+class TicketSlaEscalationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        (cls.client_org, cls.contract, cls.equipment,
+         cls.coordinator, cls.portal_user) = make_fixtures()
+
+    def test_overdue_tickets_get_escalated(self):
+        overdue = Ticket.objects.create(
+            client=self.client_org, subject="Vencido", description="d",
+            sla_due_at=timezone.now() - timedelta(hours=2),
+        )
+        on_time = Ticket.objects.create(
+            client=self.client_org, subject="A tiempo", description="d",
+            sla_due_at=timezone.now() + timedelta(hours=2),
+        )
+        resolved = Ticket.objects.create(
+            client=self.client_org, subject="Ya resuelto", description="d",
+            sla_due_at=timezone.now() - timedelta(hours=2),
+            status=Ticket.Status.RESOLVED,
+        )
+        count = escalate_overdue_tickets()
+        self.assertEqual(count, 1)
+        overdue.refresh_from_db()
+        on_time.refresh_from_db()
+        resolved.refresh_from_db()
+        self.assertEqual(overdue.status, Ticket.Status.ESCALATED)
+        self.assertEqual(on_time.status, Ticket.Status.OPEN)
+        self.assertEqual(resolved.status, Ticket.Status.RESOLVED)
 
 
 class TicketEmailTests(TestCase):

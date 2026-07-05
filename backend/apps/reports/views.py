@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from apps.equipment.models import Equipment
 from apps.scheduling.models import ScheduledMaintenance
 from apps.work_orders.models import WorkOrder
+from common.branding import company_logo_data_uri
 
 
 def _render_pdf(template, context, filename):
@@ -23,6 +24,7 @@ def _render_pdf(template, context, filename):
     from weasyprint import HTML
 
     context["generated_at"] = timezone.localtime()
+    context["logo_uri"] = company_logo_data_uri()
     html = render_to_string(template, context)
     pdf = HTML(string=html).write_pdf()
     response = HttpResponse(pdf, content_type="application/pdf")

@@ -33,7 +33,7 @@
 <body>
   <div class="header">
     <div>
-      <div class="brand">Dimed<span>Healthcare</span></div>
+      {% if logo_uri %}<img src="{{ logo_uri }}" alt="Dimed Healthcare S.A." style="height: 52px;">{% else %}<div class="brand">Dimed<span>Healthcare</span></div>{% endif %}
       <div class="company-sub">Servicio Técnico de Equipos Médicos de Imagenología · Ecuador</div>
     </div>
     <div class="doc-number">
