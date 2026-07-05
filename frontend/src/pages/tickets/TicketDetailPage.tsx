@@ -13,6 +13,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import { Select, Textarea } from '../../components/ui/Input'
 import { TICKET_PRIORITY_VARIANT, TICKET_STATUS_VARIANT } from './TicketsPage'
+import QuoteFormModal from '../quotes/QuoteFormModal'
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'
@@ -44,6 +45,7 @@ export default function TicketDetailPage() {
   const [resolveOpen, setResolveOpen] = useState(false)
   const [resolutionNotes, setResolutionNotes] = useState('')
   const [otModalOpen, setOtModalOpen] = useState(false)
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false)
   const [technician, setTechnician] = useState('')
 
   const isStaff = user?.role !== 'CLIENT'
@@ -343,7 +345,7 @@ export default function TicketDetailPage() {
               </div>
             ))}
             {canManage && !isFinal && (
-              <div className="mt-3">
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
                 {ticket.equipment ? (
                   <Button size="sm" variant="secondary" onClick={() => setOtModalOpen(true)}>
                     Generar OT
@@ -353,6 +355,9 @@ export default function TicketDetailPage() {
                     Asocia un equipo al ticket para generar una OT.
                   </div>
                 )}
+                <Button size="sm" variant="ghost" onClick={() => setQuoteModalOpen(true)}>
+                  Generar Cotización
+                </Button>
               </div>
             )}
           </Card>
@@ -421,6 +426,18 @@ export default function TicketDetailPage() {
           onChange={(e) => setTechnician(e.target.value)}
         />
       </Modal>
+
+      {/* Quote from ticket (no-contract flow) */}
+      <QuoteFormModal
+        open={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        prefill={{
+          client: ticket.client,
+          equipment: ticket.equipment,
+          ticket: ticket.id,
+          title: ticket.subject,
+        }}
+      />
     </div>
   )
 }
