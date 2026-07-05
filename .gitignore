@@ -68,6 +68,8 @@ minio_data/
 
 # Uploaded manuals
 manuales/uploads/
+# Bulk-import staging on the server (Dropbox is the master copy, ~300MB)
+manuales/allengers/
 
 # Coverage
 htmlcov/
