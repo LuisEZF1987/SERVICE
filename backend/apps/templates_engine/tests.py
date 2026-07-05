@@ -1,9 +1,14 @@
+import tempfile
+from pathlib import Path
+
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.core.management import call_command
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.clients.models import Client
+from apps.equipment.catalog_models import EquipmentSeries
 from apps.templates_engine.models import TechnicalManual
 
 
@@ -75,6 +80,38 @@ class TechnicalManualApiTests(TestCase):
         self.api.force_authenticate(user=self.portal_user)
         resp = self.api.get("/api/v1/templates/manuals/")
         self.assertEqual(resp.status_code, 403)
+
+    def test_import_manuals_command(self):
+        """Bulk import maps folder structure to catalog + document types."""
+        with tempfile.TemporaryDirectory() as tmp_media, tempfile.TemporaryDirectory() as tmp_root:
+            root = Path(tmp_root)
+            # Model with variants (Digiscan) + doc-type folders
+            svc = root / "HF59R - Digiscan" / "S20 - 6KW" / "2Service Manual"
+            svc.mkdir(parents=True)
+            (svc / "Manual-Servicio-DIGISCAN-S20-EMBEBIDO.html").write_text("<html/>")
+            pre = root / "HF59R - Digiscan" / "S20 - 6KW" / "1Pre-Instalacion"
+            pre.mkdir(parents=True)
+            (pre / "Formulario-PreInstalacion-DIGISCAN-S20-EMBEBIDO.html").write_text("<html/>")
+            # Single-variant model
+            ds = root / "MARS32DR - MobilXDR" / "6Datasheet"
+            ds.mkdir(parents=True)
+            (ds / "Datasheet-MARS32DR-EMBEBIDO.html").write_text("<html/>")
+
+            with override_settings(MEDIA_ROOT=tmp_media):
+                call_command("import_manuals", root=str(root), brand="Allengers")
+                self.assertEqual(TechnicalManual.objects.count(), 3)
+                self.assertTrue(
+                    TechnicalManual.objects.filter(
+                        document_type="PRE_INSTALL_FORM", model_name="HF59R Digiscan"
+                    ).exists()
+                )
+                self.assertTrue(
+                    EquipmentSeries.objects.filter(name__iexact="Digiscan S20").exists()
+                    or EquipmentSeries.objects.filter(name="Digiscan S-20").exists()
+                )
+                # Idempotent: re-running creates nothing new
+                call_command("import_manuals", root=str(root), brand="Allengers")
+                self.assertEqual(TechnicalManual.objects.count(), 3)
 
     def test_filter_by_document_type(self):
         self.api.force_authenticate(user=self.coordinator)
