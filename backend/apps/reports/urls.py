@@ -13,4 +13,9 @@ urlpatterns = [
         views.equipment_history,
         name="report-equipment-history",
     ),
+    path(
+        "service-report/<uuid:ot_id>/",
+        views.service_report,
+        name="report-service-report",
+    ),
 ]

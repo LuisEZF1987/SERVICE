@@ -87,6 +87,24 @@ class ReportsApiTests(TestCase):
         self.assertEqual(resp["Content-Type"], "application/pdf")
         self.assertTrue(resp.content.startswith(b"%PDF"))
 
+    def test_service_report_returns_pdf(self):
+        self.api.force_authenticate(user=self.coordinator)
+        resp = self.api.get(f"/api/v1/reports/service-report/{self.signed_ot.id}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "application/pdf")
+        self.assertTrue(resp.content.startswith(b"%PDF"))
+
+    def test_service_report_rejected_for_unfinished_ot(self):
+        open_ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.CORRECTIVE,
+            equipment=self.equipment,
+            client=self.client_org,
+            technician=self.technician,
+        )
+        self.api.force_authenticate(user=self.coordinator)
+        resp = self.api.get(f"/api/v1/reports/service-report/{open_ot.id}/")
+        self.assertEqual(resp.status_code, 400)
+
     def test_client_portal_cannot_access_other_org_reports(self):
         other_client = Client.objects.create(
             name="Otra Institución",

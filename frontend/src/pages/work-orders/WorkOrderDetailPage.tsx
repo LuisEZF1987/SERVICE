@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { workOrdersApi, WorkOrder } from '../../api/workOrders'
+import { reportsApi, downloadBlob } from '../../api/reports'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
@@ -175,8 +176,26 @@ export default function WorkOrderDetailPage() {
   const evidenceEditable = ['OPEN', 'IN_PROGRESS', 'PENDING_SIGNATURE'].includes(status)
 
   // Build action buttons based on status
+  const handleServiceReport = async () => {
+    try {
+      const res = await reportsApi.serviceReport(workOrder!.id)
+      downloadBlob(res.data, `informe-${workOrder!.number}.pdf`)
+      toast.success('Informe técnico generado')
+    } catch {
+      toast.error('Error al generar el informe')
+    }
+  }
+
   const actionButtons = () => {
     const buttons: React.ReactNode[] = []
+
+    if (workOrder.finished_at) {
+      buttons.push(
+        <Button key="informe" variant="secondary" size="sm" onClick={handleServiceReport}>
+          Informe PDF
+        </Button>
+      )
+    }
 
     if (workOrder.pdf_document) {
       buttons.push(

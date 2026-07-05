@@ -5,6 +5,8 @@ export const reportsApi = {
     api.get<Blob>(`/reports/maintenance-certificate/${otId}/`, { responseType: 'blob' }),
   equipmentHistory: (equipmentId: string) =>
     api.get<Blob>(`/reports/equipment-history/${equipmentId}/`, { responseType: 'blob' }),
+  serviceReport: (otId: string) =>
+    api.get<Blob>(`/reports/service-report/${otId}/`, { responseType: 'blob' }),
 }
 
 /** Trigger a browser download for a PDF blob returned by the API. */

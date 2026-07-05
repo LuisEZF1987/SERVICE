@@ -71,6 +71,50 @@ def maintenance_certificate(request, ot_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def service_report(request, ot_id):
+    """Technical service report — the narrative document sent the day after
+    the visit (many clients request it in addition to the signed OT)."""
+    ot = get_object_or_404(
+        WorkOrder.objects.select_related(
+            "equipment", "client", "technician", "contract"
+        ).prefetch_related("checklist_items", "spare_parts_used", "photos"),
+        pk=ot_id,
+    )
+    _check_client_access(request.user, ot.client_id)
+    if not ot.finished_at:
+        return Response(
+            {"detail": "El informe se emite cuando el trabajo está finalizado."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    from apps.work_orders.services.pdf import photo_thumbnail_data_uri
+
+    photos = []
+    for p in ot.photos.all():
+        uri = photo_thumbnail_data_uri(p.photo)
+        if uri:
+            photos.append(
+                {"uri": uri, "type_display": p.get_photo_type_display(), "caption": p.caption}
+            )
+    checklist = list(ot.checklist_items.all())
+    spare_parts = list(ot.spare_parts_used.all())
+    return _render_pdf(
+        "reports/pdf/service_report.html",
+        {
+            "ot": ot,
+            "equipment": ot.equipment,
+            "client": ot.client,
+            "checklist": checklist,
+            "checklist_ok": sum(1 for c in checklist if c.completed),
+            "spare_parts": spare_parts,
+            "photos": photos,
+        },
+        f"informe-{ot.number}.pdf",
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def equipment_history(request, equipment_id):
     """Full service history of one equipment: every OT plus upcoming visits."""
     equipment = get_object_or_404(
