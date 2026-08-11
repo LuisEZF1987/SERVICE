@@ -43,8 +43,13 @@ class ClientBusinessRuleTests(TestCase):
         self.assertEqual(client.status, Client.Status.ACTIVE)
 
 
-class NDABlocksEquipmentAndWorkOrderTests(TestCase):
-    """A client without a signed NDA is inactive and cannot hold equipment or OTs."""
+class NDADoesNotBlockOperationTests(TestCase):
+    """A missing NDA is flagged, never blocking.
+
+    Blocking registration would not prevent the technician from accessing the
+    client's information — it would only keep the visit out of the system. The
+    pending NDA is surfaced in the UI for commercial follow-up instead.
+    """
 
     @classmethod
     def setUpTestData(cls):
@@ -74,11 +79,9 @@ class NDABlocksEquipmentAndWorkOrderTests(TestCase):
         payload.update(overrides)
         return payload
 
-    def test_equipment_rejected_for_client_without_nda(self):
+    def test_equipment_accepted_for_client_without_nda(self):
         serializer = EquipmentSerializer(data=self._equipment_payload(self.no_nda))
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("client", serializer.errors)
-        self.assertIn("NDA", str(serializer.errors["client"]))
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_equipment_accepted_for_client_with_nda(self):
         serializer = EquipmentSerializer(data=self._equipment_payload(self.active))
@@ -92,13 +95,13 @@ class NDABlocksEquipmentAndWorkOrderTests(TestCase):
             city="Quito", province="Pichincha",
         )
         self.active.nda_signed = False
-        self.active.save()  # forces INACTIVE
+        self.active.save()
         serializer = EquipmentSerializer(
             equipment, data={"area": "Emergencias"}, partial=True
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_work_order_rejected_for_client_without_nda(self):
+    def test_work_order_accepted_for_client_without_nda(self):
         equipment = Equipment.objects.create(
             internal_code="DIM-NDA-003", serial_number="SN-NDA-003",
             modality=Equipment.Modality.XRAY_FIXED, brand="ACME",
@@ -111,8 +114,7 @@ class NDABlocksEquipmentAndWorkOrderTests(TestCase):
             "technician": str(self.technician.id),
             "reported_problem": "No enciende",
         })
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("NDA", str(serializer.errors))
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_work_order_accepted_for_client_with_nda(self):
         equipment = Equipment.objects.create(

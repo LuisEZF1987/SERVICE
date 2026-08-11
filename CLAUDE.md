@@ -43,6 +43,7 @@ Empresa: Dimed Healthcare S.A. (Ecuador)
 - Todo el servicio técnico lo ejecuta Dimed Healthcare directamente (no hay subcontratistas).
 - El ticket (TKT-YYYY-NNNN) es el historial del caso reportado por el cliente; una falla puede generar varias OTs vinculadas. El SLA del ticket se hereda del contrato (sla_response_hours). Las notas internas de tickets nunca se muestran ni envían al cliente.
 - OT firmada por cliente = documento oficial que certifica el servicio realizado; es la base para facturar al cliente.
-- Cliente sin NDA firmado = inactivo (no puede tener equipos ni OT).
+- El NDA se registra y se vigila, pero NO bloquea la operación: un cliente sin NDA firmado puede tener equipos y OT. Bloquearlo no evitaría el acceso del técnico a la información, solo dejaría la visita fuera del sistema. El NDA pendiente se muestra como alerta en la ficha del cliente para seguimiento comercial.
+- El contrato de mantenimiento es por equipo, no por cliente: un mismo cliente puede tener equipos bajo contrato y equipos sin contrato (Equipment.contract es opcional).
 - Una OT cerrada queda bloqueada e inmutable.
 - La facturación y la contabilidad se manejan en un sistema externo propio de Dimed; este sistema NO factura.
