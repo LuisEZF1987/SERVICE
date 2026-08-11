@@ -42,6 +42,8 @@ export const clientsApi = {
   create: (data: Partial<Client>) => api.post<Client>('/clients/', data),
   update: (id: string, data: Partial<Client>) => api.patch<Client>(`/clients/${id}/`, data),
   delete: (id: string) => api.delete(`/clients/${id}/`),
+  /** Re-send the NDA for signature (same email sent on registration). */
+  sendNda: (id: string) => api.post<{ detail: string }>(`/clients/${id}/nda/send/`),
   /** Register the signed NDA (file + date); activates the client. */
   uploadNda: (id: string, file: File, signedDate: string) => {
     const form = new FormData()

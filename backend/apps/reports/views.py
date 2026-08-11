@@ -3,7 +3,6 @@
 Reports are rendered on demand with WeasyPrint (same engine as the OT PDF)
 and streamed back as application/pdf — no persistent models needed.
 """
-from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -15,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.clients.models import Client
+from apps.clients.services.nda import nda_filename, render_nda_pdf
 from apps.equipment.models import Equipment
 from apps.scheduling.models import ScheduledMaintenance
 from apps.work_orders.models import WorkOrder
@@ -50,26 +50,10 @@ def nda_agreement(request, client_id):
     )
     _check_client_access(request.user, client.id)
 
-    # The contact flagged as signer, if the client registered one
-    signer = next((c for c in client.contacts.all() if c.is_signer), None)
-
-    return _render_pdf(
-        "reports/pdf/nda.html",
-        {
-            "client": client,
-            "signer": signer,
-            "nda_validity_years": settings.NDA_VALIDITY_YEARS,
-            "company": {
-                "legal_name": settings.COMPANY_LEGAL_NAME,
-                "ruc": settings.COMPANY_RUC,
-                "address": settings.COMPANY_ADDRESS,
-                "city": settings.COMPANY_CITY,
-                "representative": settings.COMPANY_REPRESENTATIVE,
-                "representative_role": settings.COMPANY_REPRESENTATIVE_ROLE,
-            },
-        },
-        f"NDA-{client.ruc}.pdf",
-    )
+    pdf = render_nda_pdf(client)
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{nda_filename(client)}"'
+    return response
 
 
 @api_view(["GET"])

@@ -1,12 +1,15 @@
 from datetime import timedelta
+from unittest.mock import patch
 
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
-from apps.clients.models import Client
+from apps.clients.models import Client, ClientContact
+from apps.clients.tasks import send_nda_for_signature
 from apps.equipment.models import Equipment
 from apps.equipment.serializers import EquipmentSerializer
 from apps.work_orders.models import WorkOrder
@@ -203,3 +206,132 @@ class NDADocumentFlowTests(TestCase):
         self.assertIn(resp.status_code, (401, 403))
         self.client_org.refresh_from_db()
         self.assertFalse(self.client_org.nda_signed)
+
+
+class NDAEmailTaskTests(TestCase):
+    """The task itself: renders the NDA and emails it to the right recipients."""
+
+    def setUp(self):
+        mail.outbox = []
+
+    def _client(self, **overrides):
+        defaults = dict(
+            name="Hospital Nuevo", ruc="1790012345006",
+            client_type=Client.ClientType.PRIVATE, address="Av. D",
+            city="Quito", province="Pichincha",
+            email="contacto@hospitalnuevo.test",
+        )
+        defaults.update(overrides)
+        return Client.objects.create(**defaults)
+
+    def test_sends_nda_with_pdf_attached(self):
+        client = self._client()
+        sent = send_nda_for_signature(str(client.id))
+        self.assertEqual(sent, ["contacto@hospitalnuevo.test"])
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertIn("Acuerdo de Confidencialidad", message.subject)
+        self.assertIn(client.name, message.subject)
+        filename, content, mimetype = message.attachments[0]
+        self.assertEqual(filename, "NDA-1790012345006.pdf")
+        self.assertEqual(mimetype, "application/pdf")
+        self.assertTrue(content.startswith(b"%PDF"))
+
+    def test_skips_client_without_email(self):
+        client = self._client(ruc="1790012345007", email="")
+        self.assertIsNone(send_nda_for_signature(str(client.id)))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_skips_client_that_already_signed(self):
+        client = self._client(ruc="1790012345008", nda_signed=True)
+        self.assertIsNone(send_nda_for_signature(str(client.id)))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_signer_contact_preferred_over_institutional_email(self):
+        client = self._client(ruc="1790012345009", email="general@hospital.test")
+        ClientContact.objects.create(
+            client=client, name="Ana Ruiz", position="Gerente",
+            email="ana@hospital.test", is_signer=True,
+        )
+        send_nda_for_signature(str(client.id))
+        self.assertEqual(mail.outbox[0].to, ["ana@hospital.test"])
+
+
+class NDAAutoSendTests(TestCase):
+    """Registering a client without a signed NDA queues the NDA email."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.coordinator = User.objects.create_user(
+            username="coord-send", password="pw", role=User.Role.COORDINATOR
+        )
+
+    def setUp(self):
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.coordinator)
+
+    def _payload(self, **overrides):
+        payload = dict(
+            name="Hospital Nuevo", ruc="1790012345010",
+            client_type=Client.ClientType.PRIVATE, address="Av. D",
+            city="Quito", province="Pichincha",
+            email="contacto@hospitalnuevo.test",
+        )
+        payload.update(overrides)
+        return payload
+
+    @patch("apps.clients.views.send_nda_for_signature.delay")
+    def test_registration_queues_nda_email(self, delay):
+        resp = self.api.post("/api/v1/clients/", self._payload(), format="json")
+        self.assertEqual(resp.status_code, 201, resp.content[:300])
+        delay.assert_called_once_with(resp.data["id"])
+
+    @patch("apps.clients.views.send_nda_for_signature.delay")
+    def test_no_email_when_registered_with_nda_signed(self, delay):
+        resp = self.api.post(
+            "/api/v1/clients/",
+            self._payload(
+                ruc="1790012345011",
+                nda_signed=True,
+                nda_signed_date=timezone.localdate().isoformat(),
+            ),
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.content[:300])
+        delay.assert_not_called()
+
+    @patch("apps.clients.views.send_nda_for_signature.delay")
+    def test_resend_endpoint_queues_email(self, delay):
+        client_org = Client.objects.create(
+            name="Hospital Reenvio", ruc="1790012345012",
+            client_type=Client.ClientType.PRIVATE, address="Av. E",
+            city="Quito", province="Pichincha",
+            email="reenvio@hospital.test",
+        )
+        resp = self.api.post(f"/api/v1/clients/{client_org.id}/nda/send/")
+        self.assertEqual(resp.status_code, 200, resp.content[:300])
+        self.assertIn("reenvio@hospital.test", resp.data["detail"])
+        delay.assert_called_once_with(str(client_org.id))
+
+    @patch("apps.clients.views.send_nda_for_signature.delay")
+    def test_resend_rejected_when_already_signed(self, delay):
+        client_org = Client.objects.create(
+            name="Hospital Firmado", ruc="1790012345013",
+            client_type=Client.ClientType.PRIVATE, address="Av. F",
+            city="Quito", province="Pichincha",
+            email="firmado@hospital.test", nda_signed=True,
+        )
+        resp = self.api.post(f"/api/v1/clients/{client_org.id}/nda/send/")
+        self.assertEqual(resp.status_code, 400)
+        delay.assert_not_called()
+
+    @patch("apps.clients.views.send_nda_for_signature.delay")
+    def test_resend_rejected_without_any_email(self, delay):
+        client_org = Client.objects.create(
+            name="Hospital Sin Correo", ruc="1790012345014",
+            client_type=Client.ClientType.PRIVATE, address="Av. H",
+            city="Quito", province="Pichincha", email="",
+        )
+        resp = self.api.post(f"/api/v1/clients/{client_org.id}/nda/send/")
+        self.assertEqual(resp.status_code, 400)
+        delay.assert_not_called()

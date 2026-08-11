@@ -1,0 +1,24 @@
+Estimados señores de {{ client.name }}:
+
+Reciban un cordial saludo de {{ company_name }}.
+
+Antes de iniciar la prestación de servicios técnicos sobre su equipamiento médico,
+adjuntamos el Acuerdo de Confidencialidad (NDA) que regula el tratamiento de la
+información a la que nuestro personal accederá durante las intervenciones.
+
+El documento ya viene con los datos de su institución. Le agradecemos:
+
+  1. Revisarlo y, de estar conforme, imprimirlo.
+  2. Firmarlo por el representante autorizado.
+  3. Devolvernos una copia escaneada respondiendo a este correo.
+
+Una vez recibido el acuerdo firmado, quedará habilitado el registro de sus equipos
+y la apertura de órdenes de trabajo.
+
+Quedamos atentos a cualquier consulta sobre el contenido del documento.
+
+Atentamente,
+
+{{ company_name }}
+Servicio Técnico de Equipos Médicos de Imagenología
+{{ from_email }}

@@ -14,6 +14,7 @@ from .serializers import (
     ClientSerializer,
     NDAUploadSerializer,
 )
+from .tasks import nda_recipients, send_nda_for_signature
 
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -42,10 +43,38 @@ class ClientViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        client = serializer.save(created_by=self.request.user)
+        # A new client starts inactive until the NDA is signed, so send it out
+        # for signature right away. The task is a no-op without an email.
+        if not client.nda_signed:
+            send_nda_for_signature.delay(str(client.id))
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="nda/send",
+        permission_classes=[IsAdminOrCoordinator],
+    )
+    def send_nda(self, request, pk=None):
+        """Re-send the NDA for signature (the same email sent on registration)."""
+        client = self.get_object()
+        if client.nda_signed:
+            return Response(
+                {"detail": "El cliente ya tiene el NDA firmado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        recipients = nda_recipients(client)
+        if not recipients:
+            return Response(
+                {"detail": "El cliente no tiene un correo registrado. "
+                           "Añada un contacto firmante o el email institucional."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        send_nda_for_signature.delay(str(client.id))
+        return Response({"detail": f"NDA enviado a {', '.join(recipients)}."})
 
     @action(
         detail=True,
