@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.clients.models import Client, ClientContact
+from apps.clients.services.nda import client_signer
 from apps.clients.tasks import send_nda_for_signature
 from apps.equipment.models import Equipment
 from apps.equipment.serializers import EquipmentSerializer
@@ -206,6 +207,44 @@ class NDADocumentFlowTests(TestCase):
         self.assertIn(resp.status_code, (401, 403))
         self.client_org.refresh_from_db()
         self.assertFalse(self.client_org.nda_signed)
+
+
+class NDASignerResolutionTests(TestCase):
+    """Who appears as signer for the client on the NDA."""
+
+    def _client(self, **overrides):
+        defaults = dict(
+            name="Hospital Firma", ruc="1790012345020",
+            client_type=Client.ClientType.PRIVATE, address="Av. I",
+            city="Quito", province="Pichincha",
+        )
+        defaults.update(overrides)
+        return Client.objects.create(**defaults)
+
+    def test_legal_representative_is_used_when_registered(self):
+        client = self._client(
+            legal_representative="Ana Ruiz", legal_representative_role="Gerente General"
+        )
+        self.assertEqual(
+            client_signer(client), {"name": "Ana Ruiz", "position": "Gerente General"}
+        )
+
+    def test_legal_representative_defaults_role(self):
+        client = self._client(ruc="1790012345021", legal_representative="Ana Ruiz")
+        self.assertEqual(client_signer(client)["position"], "Representante Legal")
+
+    def test_falls_back_to_signer_contact(self):
+        client = self._client(ruc="1790012345022")
+        ClientContact.objects.create(
+            client=client, name="Luis Paz", position="Jefe de Compras",
+            email="luis@hospital.test", is_signer=True,
+        )
+        self.assertEqual(
+            client_signer(client), {"name": "Luis Paz", "position": "Jefe de Compras"}
+        )
+
+    def test_none_when_nothing_registered(self):
+        self.assertIsNone(client_signer(self._client(ruc="1790012345023")))
 
 
 class NDAEmailTaskTests(TestCase):

@@ -21,6 +21,8 @@ interface FormData {
   province: string
   phone: string
   email: string
+  legal_representative: string
+  legal_representative_role: string
   notes: string
 }
 
@@ -33,6 +35,8 @@ const emptyForm: FormData = {
   province: '',
   phone: '',
   email: '',
+  legal_representative: '',
+  legal_representative_role: '',
   notes: '',
 }
 
@@ -60,6 +64,8 @@ export default function ClientFormModal({ open, onClose, client }: ClientFormMod
           province: client.province || '',
           phone: client.phone || '',
           email: client.email || '',
+          legal_representative: client.legal_representative || '',
+          legal_representative_role: client.legal_representative_role || '',
           notes: client.notes || '',
         })
       } else {
@@ -206,6 +212,18 @@ export default function ClientFormModal({ open, onClose, client }: ClientFormMod
           onChange={(e) => handleChange('email', e.target.value)}
           error={errors.email}
           placeholder="contacto@empresa.com"
+        />
+        <Input
+          label="Representante legal"
+          value={form.legal_representative}
+          onChange={(e) => handleChange('legal_representative', e.target.value)}
+          placeholder="Nombre de quien firma por la institución"
+        />
+        <Input
+          label="Cargo del representante"
+          value={form.legal_representative_role}
+          onChange={(e) => handleChange('legal_representative_role', e.target.value)}
+          placeholder="Gerente General, Director..."
         />
         <Textarea
           label="Notas"

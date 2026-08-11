@@ -158,6 +158,11 @@ export default function ClientDetailPage() {
                   </a>
                 ) : null}
               </InfoField>
+              <InfoField label="Representante Legal">
+                {client.legal_representative
+                  ? `${client.legal_representative}${client.legal_representative_role ? ` — ${client.legal_representative_role}` : ''}`
+                  : null}
+              </InfoField>
               <InfoField label="Estado">
                 <StatusBadge status={client.status} />
               </InfoField>

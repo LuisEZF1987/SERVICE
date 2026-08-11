@@ -185,8 +185,8 @@
   </p>
 
   <div class="place-date">
-    {{ company.city }}, a los <span class="fill">&nbsp;</span> días del mes de
-    <span class="fill">&nbsp;</span> de <span class="fill">&nbsp;</span>.
+    {{ company.city }}, a los {{ generated_at|date:"j" }} días del mes de
+    {{ generated_at|date:"F" }} de {{ generated_at|date:"Y" }}.
   </div>
 
   <div class="signatures">

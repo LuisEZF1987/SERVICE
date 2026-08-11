@@ -24,6 +24,13 @@ class Client(BaseModel):
     province = models.CharField("Provincia", max_length=100)
     phone = models.CharField("Teléfono", max_length=20, blank=True)
     email = models.EmailField("Email institucional", blank=True)
+    # Who signs on behalf of the institution — printed on the NDA
+    legal_representative = models.CharField(
+        "Representante legal", max_length=200, blank=True
+    )
+    legal_representative_role = models.CharField(
+        "Cargo del representante", max_length=150, blank=True
+    )
     status = models.CharField(
         "Estado", max_length=10, choices=Status.choices, default=Status.INACTIVE
     )

@@ -11,6 +11,8 @@ export interface Client {
   province: string
   phone: string
   email: string
+  legal_representative: string
+  legal_representative_role: string
   status: string
   status_display: string
   notes: string

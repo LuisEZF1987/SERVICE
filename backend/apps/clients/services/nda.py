@@ -8,12 +8,25 @@ from common.branding import company_logo_data_uri
 NDA_TEMPLATE = "reports/pdf/nda.html"
 
 
+def client_signer(client):
+    """Who signs for the client: the registered legal representative, else the
+    contact flagged as signer. Returns {name, position} or None."""
+    if client.legal_representative:
+        return {
+            "name": client.legal_representative,
+            "position": client.legal_representative_role or "Representante Legal",
+        }
+    contact = next((c for c in client.contacts.all() if c.is_signer), None)
+    if contact:
+        return {"name": contact.name, "position": contact.position}
+    return None
+
+
 def nda_context(client):
-    """Template context for the NDA: client, signer contact and company identity."""
-    signer = next((c for c in client.contacts.all() if c.is_signer), None)
+    """Template context for the NDA: client, signer and company identity."""
     return {
         "client": client,
-        "signer": signer,
+        "signer": client_signer(client),
         "nda_validity_years": settings.NDA_VALIDITY_YEARS,
         "company": {
             "legal_name": settings.COMPANY_LEGAL_NAME,
