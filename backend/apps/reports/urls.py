@@ -18,4 +18,9 @@ urlpatterns = [
         views.service_report,
         name="report-service-report",
     ),
+    path(
+        "nda/<uuid:client_id>/",
+        views.nda_agreement,
+        name="report-nda",
+    ),
 ]

@@ -234,3 +234,15 @@ CAJA_SERVICE_KEY = env("CAJA_SERVICE_KEY", default="")
 
 # CRM (aviso opcional de cotizaciones de servicio) — vacío = desactivado
 CRM_WEBHOOK_URL = env("CRM_WEBHOOK_URL", default="")
+
+# Company identity — printed on generated legal documents (NDA)
+COMPANY_LEGAL_NAME = env("COMPANY_LEGAL_NAME", default="Dimed Healthcare S.A.")
+COMPANY_RUC = env("COMPANY_RUC", default="")
+COMPANY_ADDRESS = env("COMPANY_ADDRESS", default="")
+COMPANY_CITY = env("COMPANY_CITY", default="Quito")
+COMPANY_REPRESENTATIVE = env("COMPANY_REPRESENTATIVE", default="")
+COMPANY_REPRESENTATIVE_ROLE = env(
+    "COMPANY_REPRESENTATIVE_ROLE", default="Representante Legal"
+)
+# Years the confidentiality obligation survives termination
+NDA_VALIDITY_YEARS = env.int("NDA_VALIDITY_YEARS", default=5)

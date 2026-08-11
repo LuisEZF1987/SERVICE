@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.clients.models import Client
+
 from .models import Equipment
 
 
@@ -31,6 +33,18 @@ class EquipmentSerializer(serializers.ModelSerializer):
         if not value.startswith("DIM-"):
             raise serializers.ValidationError(
                 "El código interno debe comenzar con 'DIM-'."
+            )
+        return value
+
+    def validate_client(self, value):
+        # Business rule: a client without a signed NDA is inactive and cannot
+        # hold equipment. Only checked when assigning a new client, so existing
+        # equipment stays editable if the client is deactivated later.
+        assigning_new_client = self.instance is None or self.instance.client_id != value.id
+        if assigning_new_client and value.status != Client.Status.ACTIVE:
+            raise serializers.ValidationError(
+                f"El cliente «{value.name}» está inactivo porque no tiene el NDA "
+                f"firmado. Registre el NDA antes de asignarle equipos."
             )
         return value
 

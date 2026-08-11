@@ -3,6 +3,7 @@
 Reports are rendered on demand with WeasyPrint (same engine as the OT PDF)
 and streamed back as application/pdf — no persistent models needed.
 """
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -13,6 +14,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.clients.models import Client
 from apps.equipment.models import Equipment
 from apps.scheduling.models import ScheduledMaintenance
 from apps.work_orders.models import WorkOrder
@@ -36,6 +38,38 @@ def _check_client_access(user, client_id):
     """Client portal users can only generate reports for their own org."""
     if user.role == "CLIENT" and user.client_organization_id != client_id:
         raise PermissionDenied("No tiene acceso a este recurso.")
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def nda_agreement(request, client_id):
+    """Confidentiality agreement pre-filled with the client's data, ready to print
+    and sign. Available before the NDA exists — that is precisely its purpose."""
+    client = get_object_or_404(
+        Client.objects.prefetch_related("contacts"), pk=client_id
+    )
+    _check_client_access(request.user, client.id)
+
+    # The contact flagged as signer, if the client registered one
+    signer = next((c for c in client.contacts.all() if c.is_signer), None)
+
+    return _render_pdf(
+        "reports/pdf/nda.html",
+        {
+            "client": client,
+            "signer": signer,
+            "nda_validity_years": settings.NDA_VALIDITY_YEARS,
+            "company": {
+                "legal_name": settings.COMPANY_LEGAL_NAME,
+                "ruc": settings.COMPANY_RUC,
+                "address": settings.COMPANY_ADDRESS,
+                "city": settings.COMPANY_CITY,
+                "representative": settings.COMPANY_REPRESENTATIVE,
+                "representative_role": settings.COMPANY_REPRESENTATIVE_ROLE,
+            },
+        },
+        f"NDA-{client.ruc}.pdf",
+    )
 
 
 @api_view(["GET"])

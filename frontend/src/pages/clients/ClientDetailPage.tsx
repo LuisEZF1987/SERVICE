@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { clientsApi } from '../../api/clients'
+import { reportsApi, downloadBlob } from '../../api/reports'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import { StatusBadge } from '../../components/ui/Badge'
 import ClientFormModal from './ClientFormModal'
+import NDAUploadModal from './NDAUploadModal'
 
 function InfoField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -29,6 +32,8 @@ export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [ndaModalOpen, setNdaModalOpen] = useState(false)
+  const [downloadingNda, setDownloadingNda] = useState(false)
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['client', id],
@@ -36,6 +41,19 @@ export default function ClientDetailPage() {
     select: (res) => res.data,
     enabled: !!id,
   })
+
+  const downloadNda = async () => {
+    if (!client) return
+    setDownloadingNda(true)
+    try {
+      const res = await reportsApi.nda(client.id)
+      downloadBlob(res.data, `NDA-${client.ruc}.pdf`)
+    } catch {
+      toast.error('No se pudo generar el NDA.')
+    } finally {
+      setDownloadingNda(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -165,8 +183,84 @@ export default function ClientDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column - Contacts & Equipment */}
+        {/* Right Column - NDA, Contacts & Equipment */}
         <div className="flex flex-col gap-4">
+          <Card title="Acuerdo de Confidencialidad">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[0.78rem]" style={{ color: 'var(--muted)' }}>
+                  Estado
+                </span>
+                {client.nda_signed ? (
+                  <Badge variant="success">Firmado</Badge>
+                ) : (
+                  <Badge variant="danger">Pendiente</Badge>
+                )}
+              </div>
+
+              {client.nda_signed_date && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.78rem]" style={{ color: 'var(--muted)' }}>
+                    Fecha de firma
+                  </span>
+                  <span className="text-[0.8rem]" style={{ color: '#e2e8f0' }}>
+                    {new Date(client.nda_signed_date).toLocaleDateString('es-EC')}
+                  </span>
+                </div>
+              )}
+
+              {!client.nda_signed && (
+                <p className="text-[0.75rem]" style={{ color: '#f87171', lineHeight: 1.5 }}>
+                  Mientras el NDA no esté firmado, el cliente permanece inactivo y no puede
+                  tener equipos ni órdenes de trabajo.
+                </p>
+              )}
+
+              <div className="flex flex-col gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  onClick={downloadNda}
+                  disabled={downloadingNda}
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <path d="M7 10l5 5 5-5" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                  }
+                >
+                  {downloadingNda ? 'Generando...' : 'Descargar NDA para firma'}
+                </Button>
+
+                <Button
+                  variant={client.nda_signed ? 'ghost' : 'success'}
+                  onClick={() => setNdaModalOpen(true)}
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <path d="M17 8l-5-5-5 5" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  }
+                >
+                  {client.nda_signed ? 'Reemplazar NDA firmado' : 'Subir NDA firmado'}
+                </Button>
+
+                {client.nda_document && (
+                  <a
+                    href={client.nda_document}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[0.78rem] text-center pt-1"
+                    style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                  >
+                    Ver documento firmado
+                  </a>
+                )}
+              </div>
+            </div>
+          </Card>
+
           <Card title="Contactos">
             {client.contacts && client.contacts.length > 0 ? (
               <div className="flex flex-col gap-3">
@@ -271,6 +365,12 @@ export default function ClientDetailPage() {
       <ClientFormModal
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
+        client={client}
+      />
+
+      <NDAUploadModal
+        open={ndaModalOpen}
+        onClose={() => setNdaModalOpen(false)}
         client={client}
       />
     </div>

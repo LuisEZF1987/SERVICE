@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 1.8cm;
+    @bottom-center {
+      content: "Acuerdo de Confidencialidad · {{ company.legal_name }} — página " counter(page) " de " counter(pages);
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+  }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; line-height: 1.6; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1d4ed8; padding-bottom: 12px; margin-bottom: 22px; }
+  .brand { font-size: 17pt; font-weight: 800; color: #0f172a; }
+  .brand span { color: #1d4ed8; }
+  .company-sub { font-size: 8pt; color: #64748b; margin-top: 2px; }
+  .doc-number { font-size: 9pt; color: #475569; text-align: right; }
+  h1 { text-align: center; font-size: 14pt; text-transform: uppercase; letter-spacing: 1.2px; color: #1d4ed8; margin: 20px 0 6px; }
+  .subtitle { text-align: center; font-size: 8.5pt; color: #64748b; margin-bottom: 20px; }
+  .body-text { text-align: justify; margin-bottom: 11px; }
+  .highlight { font-weight: 700; color: #0f172a; }
+  .parties { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; margin: 16px 0; }
+  .party { margin-bottom: 10px; }
+  .party:last-child { margin-bottom: 0; }
+  .party-role { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; font-weight: 700; margin-bottom: 2px; }
+  .party-name { font-size: 10.5pt; font-weight: 700; color: #0f172a; }
+  .party-detail { font-size: 8.5pt; color: #475569; }
+  h2 { font-size: 10pt; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.6px; margin: 16px 0 6px; }
+  ol.clauses { padding-left: 0; list-style: none; counter-reset: clause; margin: 0; }
+  ol.clauses > li { counter-increment: clause; margin-bottom: 11px; text-align: justify; }
+  ol.clauses > li::before { content: "CLÁUSULA " counter(clause) ". "; font-weight: 700; color: #0f172a; font-size: 8.5pt; letter-spacing: 0.3px; }
+  .fill { display: inline-block; border-bottom: 1px solid #94a3b8; min-width: 130px; }
+  .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
+  .sign-block { width: 46%; text-align: center; }
+  .sign-line { border-top: 1px solid #334155; padding-top: 6px; font-weight: 700; font-size: 9.5pt; }
+  .sign-role { font-size: 7.5pt; color: #64748b; margin-top: 2px; }
+  .sign-meta { font-size: 7.5pt; color: #64748b; margin-top: 10px; line-height: 1.5; }
+  .place-date { margin-top: 26px; font-size: 9.5pt; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      {% if logo_uri %}<img src="{{ logo_uri }}" alt="{{ company.legal_name }}" style="height: 52px;">{% else %}<div class="brand">Dimed<span>Healthcare</span></div>{% endif %}
+      <div class="company-sub">Servicio Técnico de Equipos Médicos de Imagenología · Ecuador</div>
+    </div>
+    <div class="doc-number">
+      Documento<br><strong>NDA-{{ client.ruc }}</strong>
+    </div>
+  </div>
+
+  <h1>Acuerdo de Confidencialidad</h1>
+  <div class="subtitle">Non-Disclosure Agreement (NDA) — Servicio técnico de equipamiento médico</div>
+
+  <div class="parties">
+    <div class="party">
+      <div class="party-role">El Prestador</div>
+      <div class="party-name">{{ company.legal_name }}</div>
+      <div class="party-detail">
+        RUC: {% if company.ruc %}{{ company.ruc }}{% else %}<span class="fill">&nbsp;</span>{% endif %}
+        {% if company.address %} · {{ company.address }}{% endif %} · {{ company.city }}, Ecuador
+      </div>
+      <div class="party-detail">
+        Representada por: {% if company.representative %}{{ company.representative }}{% else %}<span class="fill">&nbsp;</span>{% endif %},
+        {{ company.representative_role }}
+      </div>
+    </div>
+    <div class="party">
+      <div class="party-role">El Cliente</div>
+      <div class="party-name">{{ client.name }}</div>
+      <div class="party-detail">
+        RUC: {{ client.ruc }} · {{ client.get_client_type_display }}
+        {% if client.address %} · {{ client.address }}{% endif %} · {{ client.city }}, {{ client.province }}
+      </div>
+      <div class="party-detail">
+        Representado por: {% if signer %}{{ signer.name }}{% if signer.position %}, {{ signer.position }}{% endif %}{% else %}<span class="fill">&nbsp;</span>, <span class="fill">&nbsp;</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <p class="body-text">
+    Las partes identificadas, en adelante denominadas conjuntamente «las Partes», acuerdan
+    suscribir el presente Acuerdo de Confidencialidad, que se regirá por las cláusulas
+    siguientes y, en lo no previsto, por la legislación vigente de la República del Ecuador.
+  </p>
+
+  <h2>Antecedentes</h2>
+  <p class="body-text">
+    El Prestador brinda servicios de mantenimiento preventivo y correctivo, instalación,
+    calibración y soporte técnico sobre equipamiento médico de imagenología. Para la ejecución
+    de dichos servicios, el Prestador accederá a instalaciones, sistemas, documentación y
+    entornos operativos del Cliente en los que puede existir información de carácter reservado.
+    Las Partes reconocen la necesidad de proteger dicha información.
+  </p>
+
+  <h2>Cláusulas</h2>
+  <ol class="clauses">
+    <li>
+      <strong>Objeto.</strong> El presente acuerdo tiene por objeto establecer las condiciones
+      bajo las cuales las Partes protegerán la Información Confidencial a la que accedan con
+      ocasión de la prestación de servicios técnicos sobre el equipamiento médico del Cliente.
+    </li>
+    <li>
+      <strong>Información Confidencial.</strong> Se entenderá por Información Confidencial toda
+      información, en cualquier soporte o formato, revelada por una Parte a la otra, incluyendo
+      de forma enunciativa y no limitativa: configuraciones, contraseñas y parámetros técnicos de
+      los equipos; arquitectura de red y sistemas de información; documentación clínica,
+      administrativa o financiera; datos de pacientes y de personal; procesos internos; políticas
+      de seguridad; información comercial, tarifas y condiciones contractuales; así como cualquier
+      dato al que se acceda incidentalmente durante la intervención técnica.
+    </li>
+    <li>
+      <strong>Obligaciones de la Parte receptora.</strong> La Parte que reciba Información
+      Confidencial se obliga a: (i) mantenerla en estricta reserva; (ii) emplearla exclusivamente
+      para la finalidad de la prestación del servicio; (iii) no divulgarla, copiarla, publicarla ni
+      cederla a terceros sin autorización previa y escrita de la Parte reveladora; (iv) limitar el
+      acceso al personal que estrictamente deba conocerla, quedando obligada a extender a dicho
+      personal las mismas obligaciones de confidencialidad; y (v) aplicar medidas de custodia y
+      seguridad no inferiores a las que emplea para su propia información reservada.
+    </li>
+    <li>
+      <strong>Datos personales y de salud.</strong> Cuando la Información Confidencial contenga
+      datos personales, y en particular datos relativos a la salud, las Partes los tratarán
+      conforme a la Ley Orgánica de Protección de Datos Personales del Ecuador y su normativa de
+      desarrollo. El Prestador actuará en calidad de encargado del tratamiento, se abstendrá de
+      acceder a historias clínicas salvo cuando resulte técnicamente indispensable, y no
+      conservará copias de dichos datos una vez concluida la intervención.
+    </li>
+    <li>
+      <strong>Excepciones.</strong> No se considerará Información Confidencial aquella que:
+      (i) sea o llegue a ser de dominio público sin infracción de este acuerdo; (ii) obrara
+      legítimamente en poder de la Parte receptora con anterioridad a su revelación; (iii) sea
+      desarrollada de forma independiente sin recurrir a la Información Confidencial; o (iv) deba
+      revelarse por mandato legal, judicial o de autoridad competente, en cuyo caso la Parte
+      receptora lo notificará previamente a la Parte reveladora cuando ello sea legalmente posible.
+    </li>
+    <li>
+      <strong>Propiedad.</strong> La Información Confidencial permanece en propiedad de la Parte
+      reveladora. Este acuerdo no confiere licencia, cesión ni derecho alguno sobre la misma, ni
+      sobre marcas, patentes, software o cualquier otro derecho de propiedad intelectual o
+      industrial.
+    </li>
+    <li>
+      <strong>Devolución y destrucción.</strong> Concluida la relación de servicio, o a
+      requerimiento de la Parte reveladora, la Parte receptora devolverá o destruirá la
+      Información Confidencial en su poder, incluidas las copias, y certificará dicha destrucción
+      por escrito si le fuera solicitado. Se exceptúan las copias que deban conservarse por
+      imperativo legal o de auditoría, que permanecerán sujetas a este acuerdo.
+    </li>
+    <li>
+      <strong>Vigencia.</strong> Este acuerdo entra en vigor en la fecha de su suscripción y
+      permanecerá vigente mientras subsista la relación de servicio entre las Partes. Las
+      obligaciones de confidencialidad aquí asumidas subsistirán por un plazo de
+      <span class="highlight">{{ nda_validity_years }} años</span> contados desde la terminación
+      de dicha relación, cualquiera que sea su causa.
+    </li>
+    <li>
+      <strong>Incumplimiento.</strong> El incumplimiento de las obligaciones previstas facultará a
+      la Parte afectada a resolver de pleno derecho la relación contractual y a reclamar la
+      indemnización por los daños y perjuicios ocasionados, sin perjuicio de las acciones civiles
+      o penales que en derecho correspondan.
+    </li>
+    <li>
+      <strong>Legislación y jurisdicción.</strong> Este acuerdo se rige por las leyes de la
+      República del Ecuador. Toda controversia derivada de su interpretación, ejecución o
+      cumplimiento que no pueda resolverse de mutuo acuerdo será sometida a mediación en un
+      centro de mediación legalmente autorizado de la ciudad de {{ company.city }} y, de no
+      alcanzarse acuerdo, a la justicia ordinaria competente, renunciando las Partes a fuero o
+      domicilio distinto.
+    </li>
+    <li>
+      <strong>Acuerdo íntegro.</strong> El presente documento constituye el acuerdo íntegro entre
+      las Partes respecto de su objeto y deja sin efecto cualquier entendimiento anterior, verbal
+      o escrito, sobre la misma materia. Toda modificación deberá constar por escrito y estar
+      suscrita por ambas Partes.
+    </li>
+  </ol>
+
+  <p class="body-text" style="margin-top: 14px;">
+    En señal de aceptación, las Partes suscriben el presente acuerdo por duplicado y a un solo
+    efecto, en el lugar y fecha indicados a continuación.
+  </p>
+
+  <div class="place-date">
+    {{ company.city }}, a los <span class="fill">&nbsp;</span> días del mes de
+    <span class="fill">&nbsp;</span> de <span class="fill">&nbsp;</span>.
+  </div>
+
+  <div class="signatures">
+    <div class="sign-block">
+      <div style="height: 46px;"></div>
+      <div class="sign-line">{% if company.representative %}{{ company.representative }}{% else %}&nbsp;{% endif %}</div>
+      <div class="sign-role">{{ company.representative_role }}</div>
+      <div class="sign-role">{{ company.legal_name }}</div>
+      <div class="sign-meta">C.I./Pasaporte: ______________________</div>
+    </div>
+    <div class="sign-block">
+      <div style="height: 46px;"></div>
+      <div class="sign-line">{% if signer %}{{ signer.name }}{% else %}&nbsp;{% endif %}</div>
+      <div class="sign-role">{% if signer and signer.position %}{{ signer.position }}{% else %}Representante autorizado{% endif %}</div>
+      <div class="sign-role">{{ client.name }}</div>
+      <div class="sign-meta">C.I./Pasaporte: ______________________</div>
+    </div>
+  </div>
+</body>
+</html>

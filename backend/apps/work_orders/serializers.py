@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.clients.models import Client
+
 from .models import ChecklistExecution, WorkOrder, WorkOrderPhoto, WorkOrderSparePart
 
 
@@ -95,6 +97,19 @@ class WorkOrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Una OT cerrada y firmada no puede ser modificada."
             )
+        # Business rule: a client without a signed NDA is inactive and cannot
+        # have work orders. Only checked on creation, so OTs opened while the
+        # client was active stay editable and closable.
+        if self.instance is None:
+            client = data.get("client")
+            if client is None and data.get("equipment"):
+                # Mirrors WorkOrder.save(), which fills client from the equipment
+                client = data["equipment"].client
+            if client and client.status != Client.Status.ACTIVE:
+                raise serializers.ValidationError(
+                    f"El cliente «{client.name}» está inactivo porque no tiene el "
+                    f"NDA firmado. Registre el NDA antes de abrir órdenes de trabajo."
+                )
         return data
 
 

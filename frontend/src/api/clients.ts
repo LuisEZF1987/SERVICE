@@ -42,6 +42,13 @@ export const clientsApi = {
   create: (data: Partial<Client>) => api.post<Client>('/clients/', data),
   update: (id: string, data: Partial<Client>) => api.patch<Client>(`/clients/${id}/`, data),
   delete: (id: string) => api.delete(`/clients/${id}/`),
+  /** Register the signed NDA (file + date); activates the client. */
+  uploadNda: (id: string, file: File, signedDate: string) => {
+    const form = new FormData()
+    form.append('nda_document', file)
+    form.append('nda_signed_date', signedDate)
+    return api.post<Client>(`/clients/${id}/nda/`, form)
+  },
   // Contacts
   listContacts: (clientId: string) => api.get<ClientContact[]>(`/clients/${clientId}/contacts/`),
   createContact: (clientId: string, data: Partial<ClientContact>) => api.post(`/clients/${clientId}/contacts/`, data),

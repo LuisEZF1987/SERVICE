@@ -7,6 +7,9 @@ export const reportsApi = {
     api.get<Blob>(`/reports/equipment-history/${equipmentId}/`, { responseType: 'blob' }),
   serviceReport: (otId: string) =>
     api.get<Blob>(`/reports/service-report/${otId}/`, { responseType: 'blob' }),
+  /** Blank NDA pre-filled with the client's data, ready to print and sign. */
+  nda: (clientId: string) =>
+    api.get<Blob>(`/reports/nda/${clientId}/`, { responseType: 'blob' }),
 }
 
 /** Trigger a browser download for a PDF blob returned by the API. */

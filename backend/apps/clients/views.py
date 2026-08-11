@@ -1,11 +1,19 @@
 from django.db.models import Count
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from common.permissions import IsAdminOrCoordinator
 
 from .models import Client, ClientContact
-from .serializers import ClientContactSerializer, ClientListSerializer, ClientSerializer
+from .serializers import (
+    ClientContactSerializer,
+    ClientListSerializer,
+    ClientSerializer,
+    NDAUploadSerializer,
+)
 
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -38,6 +46,27 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="nda",
+        permission_classes=[IsAdminOrCoordinator],
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_nda(self, request, pk=None):
+        """Register the signed NDA and activate the client in one step."""
+        client = self.get_object()
+        serializer = NDAUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        client.nda_document = serializer.validated_data["nda_document"]
+        client.nda_signed_date = serializer.validated_data["nda_signed_date"]
+        client.nda_signed = True
+        client.status = Client.Status.ACTIVE
+        client.updated_by = request.user
+        client.save()
+        return Response(ClientSerializer(client).data, status=status.HTTP_200_OK)
 
 
 class ClientContactViewSet(viewsets.ModelViewSet):

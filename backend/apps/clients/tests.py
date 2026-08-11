@@ -1,6 +1,16 @@
-from django.test import TestCase
+from datetime import timedelta
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from django.utils import timezone
+from rest_framework.test import APIClient
+
+from apps.accounts.models import User
 from apps.clients.models import Client
+from apps.equipment.models import Equipment
+from apps.equipment.serializers import EquipmentSerializer
+from apps.work_orders.models import WorkOrder
+from apps.work_orders.serializers import WorkOrderSerializer
 
 
 class ClientBusinessRuleTests(TestCase):
@@ -27,3 +37,169 @@ class ClientBusinessRuleTests(TestCase):
             ruc="1790012345002", nda_signed=True, status=Client.Status.ACTIVE
         )
         self.assertEqual(client.status, Client.Status.ACTIVE)
+
+
+class NDABlocksEquipmentAndWorkOrderTests(TestCase):
+    """A client without a signed NDA is inactive and cannot hold equipment or OTs."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.active = Client.objects.create(
+            name="Hospital Activo", ruc="1790012345003",
+            client_type=Client.ClientType.PUBLIC, address="Av. A",
+            city="Quito", province="Pichincha",
+            nda_signed=True, status=Client.Status.ACTIVE,
+        )
+        cls.no_nda = Client.objects.create(
+            name="Hospital Sin NDA", ruc="1790012345004",
+            client_type=Client.ClientType.PRIVATE, address="Av. B",
+            city="Quito", province="Pichincha",
+            nda_signed=False,
+        )
+        cls.technician = User.objects.create_user(
+            username="tec-nda", password="pw", role=User.Role.TECHNICIAN
+        )
+
+    def _equipment_payload(self, client, **overrides):
+        payload = dict(
+            internal_code="DIM-NDA-001", serial_number="SN-NDA-001",
+            modality=Equipment.Modality.XRAY_FIXED, brand="ACME",
+            model_name="X1", client=str(client.id),
+            city="Quito", province="Pichincha",
+        )
+        payload.update(overrides)
+        return payload
+
+    def test_equipment_rejected_for_client_without_nda(self):
+        serializer = EquipmentSerializer(data=self._equipment_payload(self.no_nda))
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("client", serializer.errors)
+        self.assertIn("NDA", str(serializer.errors["client"]))
+
+    def test_equipment_accepted_for_client_with_nda(self):
+        serializer = EquipmentSerializer(data=self._equipment_payload(self.active))
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_existing_equipment_stays_editable_if_client_deactivated(self):
+        equipment = Equipment.objects.create(
+            internal_code="DIM-NDA-002", serial_number="SN-NDA-002",
+            modality=Equipment.Modality.XRAY_FIXED, brand="ACME",
+            model_name="X1", client=self.active,
+            city="Quito", province="Pichincha",
+        )
+        self.active.nda_signed = False
+        self.active.save()  # forces INACTIVE
+        serializer = EquipmentSerializer(
+            equipment, data={"area": "Emergencias"}, partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_work_order_rejected_for_client_without_nda(self):
+        equipment = Equipment.objects.create(
+            internal_code="DIM-NDA-003", serial_number="SN-NDA-003",
+            modality=Equipment.Modality.XRAY_FIXED, brand="ACME",
+            model_name="X1", client=self.no_nda,
+            city="Quito", province="Pichincha",
+        )
+        serializer = WorkOrderSerializer(data={
+            "ot_type": WorkOrder.Type.CORRECTIVE,
+            "equipment": str(equipment.id),
+            "technician": str(self.technician.id),
+            "reported_problem": "No enciende",
+        })
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("NDA", str(serializer.errors))
+
+    def test_work_order_accepted_for_client_with_nda(self):
+        equipment = Equipment.objects.create(
+            internal_code="DIM-NDA-004", serial_number="SN-NDA-004",
+            modality=Equipment.Modality.XRAY_FIXED, brand="ACME",
+            model_name="X1", client=self.active,
+            city="Quito", province="Pichincha",
+        )
+        serializer = WorkOrderSerializer(data={
+            "ot_type": WorkOrder.Type.CORRECTIVE,
+            "equipment": str(equipment.id),
+            "technician": str(self.technician.id),
+            "reported_problem": "No enciende",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class NDADocumentFlowTests(TestCase):
+    """Download the blank NDA, then upload it signed to activate the client."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org = Client.objects.create(
+            name="Hospital Sin NDA", ruc="1790012345005",
+            client_type=Client.ClientType.PRIVATE, address="Av. C",
+            city="Quito", province="Pichincha", nda_signed=False,
+        )
+        cls.coordinator = User.objects.create_user(
+            username="coord-nda", password="pw", role=User.Role.COORDINATOR
+        )
+        cls.technician = User.objects.create_user(
+            username="tec-upload", password="pw", role=User.Role.TECHNICIAN
+        )
+
+    def setUp(self):
+        self.api = APIClient()
+
+    def _pdf(self, name="nda-firmado.pdf"):
+        return SimpleUploadedFile(name, b"%PDF-1.4 firmado", content_type="application/pdf")
+
+    def test_blank_nda_downloads_even_without_signed_nda(self):
+        self.api.force_authenticate(user=self.coordinator)
+        resp = self.api.get(f"/api/v1/reports/nda/{self.client_org.id}/")
+        self.assertEqual(resp.status_code, 200, getattr(resp, "content", b"")[:300])
+        self.assertEqual(resp["Content-Type"], "application/pdf")
+        self.assertTrue(resp.content.startswith(b"%PDF"))
+
+    def test_upload_signed_nda_activates_client(self):
+        self.api.force_authenticate(user=self.coordinator)
+        signed_on = timezone.localdate() - timedelta(days=1)
+        resp = self.api.post(
+            f"/api/v1/clients/{self.client_org.id}/nda/",
+            {"nda_document": self._pdf(), "nda_signed_date": signed_on.isoformat()},
+            format="multipart",
+        )
+        self.assertEqual(resp.status_code, 200, resp.content[:300])
+        self.client_org.refresh_from_db()
+        self.assertTrue(self.client_org.nda_signed)
+        self.assertEqual(self.client_org.status, Client.Status.ACTIVE)
+        self.assertEqual(self.client_org.nda_signed_date, signed_on)
+        self.assertTrue(self.client_org.nda_document)
+
+    def test_upload_rejects_future_signature_date(self):
+        self.api.force_authenticate(user=self.coordinator)
+        future = timezone.localdate() + timedelta(days=1)
+        resp = self.api.post(
+            f"/api/v1/clients/{self.client_org.id}/nda/",
+            {"nda_document": self._pdf(), "nda_signed_date": future.isoformat()},
+            format="multipart",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.client_org.refresh_from_db()
+        self.assertFalse(self.client_org.nda_signed)
+
+    def test_upload_rejects_unsupported_file_type(self):
+        self.api.force_authenticate(user=self.coordinator)
+        bad = SimpleUploadedFile("nda.exe", b"MZ", content_type="application/octet-stream")
+        resp = self.api.post(
+            f"/api/v1/clients/{self.client_org.id}/nda/",
+            {"nda_document": bad, "nda_signed_date": timezone.localdate().isoformat()},
+            format="multipart",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_technician_cannot_upload_nda(self):
+        self.api.force_authenticate(user=self.technician)
+        resp = self.api.post(
+            f"/api/v1/clients/{self.client_org.id}/nda/",
+            {"nda_document": self._pdf(), "nda_signed_date": timezone.localdate().isoformat()},
+            format="multipart",
+        )
+        self.assertIn(resp.status_code, (401, 403))
+        self.client_org.refresh_from_db()
+        self.assertFalse(self.client_org.nda_signed)
