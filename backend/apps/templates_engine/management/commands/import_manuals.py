@@ -6,8 +6,11 @@ Expected layout (the Dimed/Allengers Dropbox convention):
       <MODELO - Familia>/                 e.g. "HF59R - Digiscan"
         <VARIANTE - detalle>/             optional level, e.g. "S20 - 6KW"
           1Pre-Instalacion/  2Service Manual/  3User Manual/
-          4Capacitacion/     5Catalogo/        6Datasheet/   7HTML/
+          4Capacitacion/     5Catalogo/        6Datasheet/
             *-EMBEBIDO.html
+
+7HTML/ is skipped on purpose: it holds the manufacturer's source material
+used to write the manuals above, not documentation for the field technician.
 
 Creates/reuses the catalog entries (Manufacturer -> EquipmentModel ->
 EquipmentSeries) and one TechnicalManual per *-EMBEBIDO.html file.
@@ -45,8 +48,11 @@ DOC_DIRS = {
     "4": DocType.TRAINING,
     "5": DocType.BROCHURE,
     "6": DocType.DATASHEET,
-    "7": None,  # 7HTML: classified by filename keywords
 }
+
+# 7HTML holds the manufacturer's raw material used to write the manuals above.
+# It is working documentation, not what the technician should be handed.
+SOURCE_ONLY_DIRS = {"7"}
 
 KEYWORD_RULES = [
     (("wiring", "calibration", "callibration", "troubleshooting", "work instruction",
@@ -119,7 +125,10 @@ class Command(BaseCommand):
                 cat_model = self._get_or_create_model(manufacturer, code, modality)
 
             subdirs = [p for p in model_dir.iterdir() if p.is_dir()]
-            doc_dirs = [d for d in subdirs if d.name[:1].isdigit()]
+            doc_dirs = [
+                d for d in subdirs
+                if d.name[:1].isdigit() and d.name[:1] not in SOURCE_ONLY_DIRS
+            ]
             variant_dirs = [d for d in subdirs if not d.name[:1].isdigit()]
 
             if doc_dirs:
@@ -139,7 +148,10 @@ class Command(BaseCommand):
                 series = None
                 if not dry and cat_model:
                     series = self._get_or_create_series(cat_model, series_name)
-                v_doc_dirs = [p for p in variant_dir.iterdir() if p.is_dir()]
+                v_doc_dirs = [
+                    p for p in variant_dir.iterdir()
+                    if p.is_dir() and p.name[:1] not in SOURCE_ONLY_DIRS
+                ]
                 c, s = self._import_docs(
                     v_doc_dirs, brand, code, family, modality, cat_model, series, dry
                 )
