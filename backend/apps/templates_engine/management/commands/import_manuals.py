@@ -30,7 +30,7 @@ DocType = TechnicalManual.DocumentType
 # Modality by model code (first token of the model folder name)
 MODALITY_BY_MODEL = {
     "HF49R": "FLUOROSCOPE",
-    "HF59+": "FLUOROSCOPE",
+    "HF59PLUS": "FLUOROSCOPE",
     "HF59R": "FLUOROSCOPE",
     "MAM-VENUS+": "MAMMOGRAPH",
     "MARS32DR": "XRAY_PORTABLE",
