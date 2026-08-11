@@ -9,8 +9,21 @@ from .serializers import TechnicalManualSerializer
 
 
 def _norm(value):
-    """Normalize names for fuzzy matching: 'HF 59R (Digiscan V-30)' -> 'hf59rdigiscanv30'."""
+    """Normalize names for fuzzy matching: 'HF59R (Digiscan V-30)' -> 'hf59rdigiscanv30'."""
     return re.sub(r"[\s\-_+().]", "", value or "").lower()
+
+
+def _models_with_one_series():
+    """Catalog models whose series is unique, so it need not be spelled out."""
+    from django.db.models import Count
+
+    from apps.equipment.catalog_models import EquipmentModel
+
+    return set(
+        EquipmentModel.objects.annotate(n=Count("series"))
+        .filter(n=1)
+        .values_list("id", flat=True)
+    )
 
 
 class TechnicalManualViewSet(viewsets.ModelViewSet):
@@ -55,6 +68,7 @@ class TechnicalManualViewSet(viewsets.ModelViewSet):
             return qs.none()
 
         target = _norm(f"{equipment.brand} {equipment.model_name}")
+        single_series_models = _models_with_one_series()
         matching_ids = []
         for manual in qs:
             if _norm(manual.brand) not in target:
@@ -62,7 +76,11 @@ class TechnicalManualViewSet(viewsets.ModelViewSet):
             if manual.equipment_model and _norm(manual.equipment_model.name) not in target:
                 continue
             if manual.equipment_series and _norm(manual.equipment_series.name) not in target:
-                continue
+                # When the model has a single series there is nothing to
+                # disambiguate: naming the model already identifies the
+                # equipment, so the series is not required in its description.
+                if manual.equipment_model_id not in single_series_models:
+                    continue
             matching_ids.append(manual.id)
         return qs.filter(id__in=matching_ids)
 

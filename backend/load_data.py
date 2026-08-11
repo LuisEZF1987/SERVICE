@@ -115,7 +115,7 @@ equipo, _ = Equipment.objects.get_or_create(
         has_fda=False, has_ce=True, has_iso_13485=True,
         modality="FLUOROSCOPE",
         brand="Allengers",
-        model_name="HF 59R (Digiscan V-30)",
+        model_name="HF59R (Digiscan V-30)",
         country_of_origin="India",
         year_of_manufacture=2024,
         technical_specs={
@@ -159,7 +159,7 @@ ot1, _ = WorkOrder.objects.get_or_create(
         total_hours=78.5,
         reported_problem="Instalación de equipo según contrato HGLA-052-2024",
         diagnosis="N/A - Instalación nueva",
-        work_performed="Instalación completa del Arco en C Allengers HF 59R con flat panel. "
+        work_performed="Instalación completa del Arco en C Allengers HF59R con flat panel. "
             "Desembalaje, ensamblaje mecánico, conexión eléctrica 220V/60Hz, "
             "configuración de software, calibración del detector flat panel, "
             "pruebas de fluoroscopía y radiografía, configuración DICOM, "

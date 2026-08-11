@@ -123,3 +123,99 @@ class TechnicalManualApiTests(TestCase):
         )
         resp = self.api.get("/api/v1/templates/manuals/?document_type=DATASHEET")
         self.assertEqual(resp.json()["count"], 1)
+
+
+class ManualsForEquipmentTests(TestCase):
+    """Which manuals apply to a given equipment (?for_equipment=)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.equipment.catalog_models import EquipmentModel, Manufacturer
+        from apps.equipment.models import Equipment
+
+        cls.coordinator = User.objects.create_user(
+            username="coord-forequip", password="pw", role=User.Role.COORDINATOR
+        )
+        cls.client_org = Client.objects.create(
+            name="Hospital ForEquip", ruc="1790012345041",
+            client_type=Client.ClientType.PUBLIC, address="X",
+            city="Quito", province="Pichincha",
+        )
+        allengers = Manufacturer.objects.create(name="Allengers")
+
+        # Single-series model: naming the series is not required
+        cls.hf59plus = EquipmentModel.objects.create(
+            manufacturer=allengers, name="HF59PLUS", modality="FLUOROSCOPE"
+        )
+        cls.compact = EquipmentSeries.objects.create(
+            equipment_model=cls.hf59plus, name="Compact"
+        )
+        # Multi-series model: the series tells the variants apart
+        cls.hf59r = EquipmentModel.objects.create(
+            manufacturer=allengers, name="HF59R", modality="FLUOROSCOPE"
+        )
+        cls.v30 = EquipmentSeries.objects.create(
+            equipment_model=cls.hf59r, name="Digiscan V-30"
+        )
+        cls.s20 = EquipmentSeries.objects.create(
+            equipment_model=cls.hf59r, name="Digiscan S-20"
+        )
+
+        cls.manual_compact = cls._manual(cls.hf59plus, cls.compact, "Compact")
+        cls.manual_v30 = cls._manual(cls.hf59r, cls.v30, "V30")
+        cls.manual_s20 = cls._manual(cls.hf59r, cls.s20, "S20")
+
+        cls.equipment = Equipment.objects.create(
+            serial_number="SN-FOREQUIP-1", modality="FLUOROSCOPE",
+            brand="Allengers", model_name="HF59PLUS",
+            client=cls.client_org, city="Quito", province="Pichincha",
+        )
+
+    @classmethod
+    def _manual(cls, model, series, tag):
+        return TechnicalManual.objects.create(
+            brand="Allengers", modality="FLUOROSCOPE",
+            model_name=f"{model.name} {series.name}",
+            document_type="SERVICE_MANUAL",
+            equipment_model=model, equipment_series=series,
+            title=f"Manual {tag}",
+            file=SimpleUploadedFile(f"m-{tag}.pdf", b"%PDF-1.4 x"),
+        )
+
+    def setUp(self):
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.coordinator)
+
+    def _titles_for(self, equipment):
+        resp = self.api.get(
+            f"/api/v1/templates/manuals/?for_equipment={equipment.id}"
+        )
+        self.assertEqual(resp.status_code, 200)
+        return sorted(m["title"] for m in resp.json()["results"])
+
+    def test_single_series_model_matches_without_naming_the_series(self):
+        self.assertEqual(self._titles_for(self.equipment), ["Manual Compact"])
+
+    def test_single_series_model_also_matches_when_series_is_named(self):
+        self.equipment.model_name = "HF59PLUS (Compact)"
+        self.equipment.save()
+        self.assertEqual(self._titles_for(self.equipment), ["Manual Compact"])
+
+    def test_multi_series_model_still_requires_the_series(self):
+        self.equipment.model_name = "HF59R (Digiscan V-30)"
+        self.equipment.save()
+        self.assertEqual(self._titles_for(self.equipment), ["Manual V30"])
+
+    def test_multi_series_model_without_series_matches_nothing(self):
+        # Ambiguous on purpose: we cannot tell a V-30 from an S-20 here
+        self.equipment.model_name = "HF59R"
+        self.equipment.save()
+        self.assertEqual(self._titles_for(self.equipment), [])
+
+    def test_other_brands_are_never_returned(self):
+        TechnicalManual.objects.create(
+            brand="Siemens", modality="FLUOROSCOPE", model_name="HF59PLUS Compact",
+            document_type="SERVICE_MANUAL", title="Manual Ajeno",
+            file=SimpleUploadedFile("otro.pdf", b"%PDF-1.4 x"),
+        )
+        self.assertEqual(self._titles_for(self.equipment), ["Manual Compact"])
