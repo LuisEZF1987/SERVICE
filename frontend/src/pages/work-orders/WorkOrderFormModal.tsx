@@ -9,6 +9,7 @@ import api from '../../api/client'
 import { User } from '../../api/auth'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
+import SearchSelect from '../../components/ui/SearchSelect'
 import { Select, Textarea } from '../../components/ui/Input'
 
 const OT_TYPE_OPTIONS = [
@@ -81,17 +82,22 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
   const clientsList = clientsData?.results ?? []
   const techniciansList = techniciansData?.results ?? []
 
-  // Equipment options
-  const equipmentOptions = equipmentList.map((eq: Equipment) => ({
-    value: eq.id,
-    label: `${eq.internal_code} - ${eq.brand} ${eq.model_name}`,
-  }))
-
   // Client options
   const clientOptions = clientsList.map((c: Client) => ({
     value: c.id,
     label: c.name,
+    hint: c.ruc,
   }))
+
+  // Only the equipment of the selected client: the OT is opened for a client
+  // and then for one of its equipment, never the other way round.
+  const equipmentOptions = equipmentList
+    .filter((eq: Equipment) => !form.client || eq.client === form.client)
+    .map((eq: Equipment) => ({
+      value: eq.id,
+      label: `${eq.internal_code} — ${eq.brand} ${eq.model_name}`,
+      hint: eq.serial_number ? `Serie: ${eq.serial_number}` : undefined,
+    }))
 
   // Technician options
   const technicianOptions = techniciansList.map((u: User) => ({
@@ -115,15 +121,14 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
     }
   }, [workOrder, open])
 
-  // Auto-fill client when equipment is selected
+  // Changing the client invalidates an equipment picked for the previous one
   useEffect(() => {
-    if (form.equipment && equipmentList.length > 0) {
-      const selectedEquipment = equipmentList.find((eq: Equipment) => eq.id === form.equipment)
-      if (selectedEquipment && selectedEquipment.client) {
-        setForm((prev) => ({ ...prev, client: selectedEquipment.client }))
-      }
+    if (!form.client || !form.equipment || equipmentList.length === 0) return
+    const selected = equipmentList.find((eq: Equipment) => eq.id === form.equipment)
+    if (selected && selected.client !== form.client) {
+      setForm((prev) => ({ ...prev, equipment: '' }))
     }
-  }, [form.equipment, equipmentList])
+  }, [form.client, form.equipment, equipmentList])
 
   // Create mutation
   const createMutation = useMutation({
@@ -154,6 +159,10 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
   })
 
   const handleSubmit = () => {
+    if (!form.client) {
+      toast.error('Selecciona un cliente')
+      return
+    }
     if (!form.equipment) {
       toast.error('Selecciona un equipo')
       return
@@ -221,18 +230,25 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
         />
       </div>
 
-      <Select
-        label="Equipo"
-        options={equipmentOptions}
-        value={form.equipment}
-        onChange={(e) => updateField('equipment', e.target.value)}
-      />
-
-      <Select
+      <SearchSelect
         label="Cliente"
         options={clientOptions}
         value={form.client}
-        onChange={(e) => updateField('client', e.target.value)}
+        onChange={(value) => updateField('client', value)}
+        placeholder="Busque por nombre o RUC..."
+        emptyMessage="Ningún cliente coincide"
+      />
+
+      <SearchSelect
+        label="Equipo"
+        options={equipmentOptions}
+        value={form.equipment}
+        onChange={(value) => updateField('equipment', value)}
+        disabled={!form.client}
+        placeholder={
+          form.client ? 'Busque por código, marca o serie...' : 'Seleccione primero el cliente'
+        }
+        emptyMessage="Este cliente no tiene equipos registrados"
       />
 
       <Select
