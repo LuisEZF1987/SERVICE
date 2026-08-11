@@ -25,14 +25,9 @@ class EquipmentSerializer(serializers.ModelSerializer):
             "contract", "maintenance_template", "photo",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
-
-    def validate_internal_code(self, value):
-        if not value.startswith("DIM-"):
-            raise serializers.ValidationError(
-                "El código interno debe comenzar con 'DIM-'."
-            )
-        return value
+        # internal_code is assigned by Dimed in Equipment.save() and identifies
+        # the asset on its physical label — it must not change afterwards.
+        read_only_fields = ["id", "internal_code", "created_at", "updated_at"]
 
 
 class EquipmentListSerializer(serializers.ModelSerializer):

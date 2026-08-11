@@ -31,7 +31,7 @@ interface FormData {
 }
 
 const emptyForm: FormData = {
-  internal_code: 'DIM-',
+  internal_code: '',
   serial_number: '',
   modality: '',
   brand: '',
@@ -122,7 +122,6 @@ export default function EquipmentFormModal({ open, onClose, equipment }: Equipme
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {}
 
-    if (!form.internal_code.trim()) newErrors.internal_code = 'El código interno es obligatorio'
     if (!form.serial_number.trim()) newErrors.serial_number = 'El número de serie es obligatorio'
     if (!form.modality) newErrors.modality = 'Seleccione una modalidad'
     if (!form.brand.trim()) newErrors.brand = 'La marca es obligatoria'
@@ -166,8 +165,10 @@ export default function EquipmentFormModal({ open, onClose, equipment }: Equipme
   const handleSubmit = () => {
     if (!validate()) return
 
+    // internal_code is assigned by the backend and read-only there
+    const { internal_code: _ignored, ...fields } = form
     const data: Partial<Equipment> = {
-      ...form,
+      ...fields,
       year_of_manufacture: form.year_of_manufacture ? Number(form.year_of_manufacture) : null,
     }
 
@@ -206,10 +207,10 @@ export default function EquipmentFormModal({ open, onClose, equipment }: Equipme
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <Input
             label="Código Interno"
-            value={form.internal_code}
-            onChange={(e) => handleChange('internal_code', e.target.value)}
-            error={errors.internal_code}
-            placeholder="DIM-001"
+            value={isEditing ? form.internal_code : ''}
+            readOnly
+            disabled
+            placeholder="Se genera automáticamente según la modalidad"
           />
           <Input
             label="Número de Serie"

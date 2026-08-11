@@ -28,10 +28,23 @@ class Equipment(BaseModel):
         OUT_OF_SERVICE = "OUT_OF_SERVICE", "Fuera de servicio"
         DECOMMISSIONED = "DECOMMISSIONED", "Baja"
 
+    # Short code per modality used to build the internal code (DIM-<TIPO>-<NNN>)
+    MODALITY_CODES = {
+        Modality.XRAY_FIXED: "RX",
+        Modality.XRAY_PORTABLE: "RXP",
+        Modality.CT: "TAC",
+        Modality.MRI: "RM",
+        Modality.ULTRASOUND: "US",
+        Modality.MAMMOGRAPH: "MAMO",
+        Modality.FLUOROSCOPE: "FLUORO",
+        Modality.DENSITOMETER: "DENSI",
+        Modality.OTHER: "GEN",
+    }
+
     # Identification
     internal_code = models.CharField(
-        "Código interno Dimed", max_length=30, unique=True,
-        help_text="Formato: DIM-[TIPO]-[NÚMERO]"
+        "Código interno Dimed", max_length=30, unique=True, blank=True,
+        help_text="Se genera automáticamente: DIM-[TIPO]-[NÚMERO]"
     )
     serial_number = models.CharField(
         "Número de serie del fabricante", max_length=100, unique=True
@@ -110,6 +123,32 @@ class Equipment(BaseModel):
 
     def __str__(self):
         return f"{self.internal_code} — {self.brand} {self.model_name} ({self.get_modality_display()})"
+
+    def save(self, *args, **kwargs):
+        # The internal code is assigned by Dimed, never typed in: an empty or
+        # prefix-only value means "generate it".
+        if not self.internal_code or self.internal_code.strip("- ").upper() == "DIM":
+            self.internal_code = self._generate_internal_code()
+        super().save(*args, **kwargs)
+
+    def _generate_internal_code(self):
+        """Next free DIM-<TIPO>-<NNN> for this modality.
+
+        Sequences are per modality, so codes stay readable on the physical
+        asset labels. Legacy codes whose suffix is not a plain number are
+        skipped rather than breaking the count.
+        """
+        prefix = f"DIM-{self.MODALITY_CODES.get(self.modality, 'GEN')}-"
+        used = Equipment.objects.filter(
+            internal_code__startswith=prefix
+        ).values_list("internal_code", flat=True)
+
+        highest = 0
+        for code in used:
+            suffix = code[len(prefix):]
+            if suffix.isdigit():
+                highest = max(highest, int(suffix))
+        return f"{prefix}{highest + 1:03d}"
 
     @property
     def is_under_factory_warranty(self):
