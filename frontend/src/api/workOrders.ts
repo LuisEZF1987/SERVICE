@@ -76,6 +76,8 @@ export interface WorkOrder {
   technician_signed_at: string | null
   pdf_document: string | null
   signature_email_sent: boolean
+  /** OT signed with electronic certificates outside the system. */
+  electronic_signature_document: string | null
   created_at: string
   updated_at: string
 }
@@ -99,6 +101,11 @@ export const workOrdersApi = {
   /** Draft the technical fields from the technician's raw notes (proposal only). */
   assistWriting: (id: string, notes: string) =>
     api.post<WorkOrderDraft>(`/work-orders/${id}/assist-writing/`, { notes }),
+  /** Register the OT signed elsewhere with electronic certificates. */
+  uploadSignedPdf: (id: string, data: FormData) =>
+    api.post<WorkOrder>(`/work-orders/${id}/upload-signed-pdf/`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   start: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/start/`),
   finish: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/finish/`),
   sign: (id: string, data: FormData) => api.post<WorkOrder>(`/work-orders/${id}/sign/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),

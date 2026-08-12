@@ -13,6 +13,7 @@ import { Select, Textarea } from '../../components/ui/Input'
 import WorkOrderFormModal from './WorkOrderFormModal'
 import SignWorkOrderModal from './SignWorkOrderModal'
 import WritingAssistantModal from './WritingAssistantModal'
+import UploadSignedPdfModal from './UploadSignedPdfModal'
 import WorkOrderChecklistSection from './WorkOrderChecklistSection'
 import WorkOrderSparePartsSection from './WorkOrderSparePartsSection'
 import WorkOrderPhotosSection from './WorkOrderPhotosSection'
@@ -100,6 +101,7 @@ export default function WorkOrderDetailPage() {
   const [diagnosisDirty, setDiagnosisDirty] = useState(false)
   const [workPerformedDirty, setWorkPerformedDirty] = useState(false)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [uploadSignedOpen, setUploadSignedOpen] = useState(false)
   const [followUpNotes, setFollowUpNotes] = useState('')
 
   const { data: workOrder, isLoading } = useQuery({
@@ -282,6 +284,22 @@ export default function WorkOrderDetailPage() {
     }
 
     if (status === 'PENDING_SIGNATURE') {
+      buttons.push(
+        <Button
+          key="upload-signed"
+          variant="secondary"
+          onClick={() => setUploadSignedOpen(true)}
+          icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <path d="M17 8l-5-5-5 5" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          }
+        >
+          Subir OT firmada
+        </Button>
+      )
       buttons.push(
         <Button
           key="client-sign"
@@ -710,6 +728,32 @@ export default function WorkOrderDetailPage() {
                   <Badge variant="secondary">Sin firma</Badge>
                 )}
               </InfoField>
+              {workOrder.electronic_signature_document && (
+                <div
+                  className="p-3 mb-3"
+                  style={{
+                    background: 'rgba(34,197,94,0.07)',
+                    border: '1px solid rgba(34,197,94,0.25)',
+                    borderRadius: '10px',
+                  }}
+                >
+                  <div
+                    className="text-[0.65rem] font-bold uppercase tracking-wider mb-1"
+                    style={{ color: '#22c55e' }}
+                  >
+                    Firmada electrónicamente
+                  </div>
+                  <a
+                    href={workOrder.electronic_signature_document}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[0.8rem]"
+                    style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                  >
+                    Ver documento firmado
+                  </a>
+                </div>
+              )}
               {status === 'PENDING_SIGNATURE' && !workOrder.technician_signed_at && (
                 <div
                   className="p-3 text-[0.78rem]"
@@ -743,6 +787,13 @@ export default function WorkOrderDetailPage() {
         mode={signMode ?? 'client'}
         onClose={() => setSignMode(null)}
         workOrderId={workOrder.id}
+      />
+
+      {/* OT signed with electronic certificates, signed outside the system */}
+      <UploadSignedPdfModal
+        workOrder={workOrder}
+        open={uploadSignedOpen}
+        onClose={() => setUploadSignedOpen(false)}
       />
 
       {/* Writing assistant — fills the form, does not save */}

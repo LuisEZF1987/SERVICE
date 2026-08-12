@@ -125,3 +125,41 @@ class SignWorkOrderSerializer(serializers.Serializer):
 class TechnicianSignWorkOrderSerializer(serializers.Serializer):
     """Serializer for the technician's signature on a work order."""
     technician_signature = serializers.ImageField()
+
+
+class UploadSignedPdfSerializer(serializers.Serializer):
+    """Registers the OT signed with electronic certificates, signed elsewhere.
+
+    Dimed and the client sign the PDF with their own certificates (FirmaEC and
+    similar); this only receives the finished document.
+    """
+
+    electronic_signature_document = serializers.FileField()
+    client_signer_name = serializers.CharField(max_length=200)
+    client_signer_position = serializers.CharField(max_length=100, allow_blank=True)
+
+    MAX_SIZE_MB = 20
+
+    def validate_electronic_signature_document(self, value):
+        if not value.name.lower().endswith(".pdf"):
+            raise serializers.ValidationError("El documento debe ser un PDF.")
+        if value.size > self.MAX_SIZE_MB * 1024 * 1024:
+            raise serializers.ValidationError(
+                f"El documento no puede superar {self.MAX_SIZE_MB} MB."
+            )
+
+        head = value.read(2048)
+        value.seek(0)
+        if not head.startswith(b"%PDF"):
+            raise serializers.ValidationError("El archivo no es un PDF válido.")
+
+        # A signed PDF carries a /ByteRange entry covering the signed bytes.
+        # Catches the common mistake of uploading the unsigned copy.
+        value.seek(0)
+        if b"/ByteRange" not in value.read():
+            raise serializers.ValidationError(
+                "El PDF no contiene una firma electrónica. Verifique que subió "
+                "el archivo ya firmado y no el original."
+            )
+        value.seek(0)
+        return value

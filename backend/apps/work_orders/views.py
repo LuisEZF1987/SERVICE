@@ -15,6 +15,7 @@ from .serializers import (
     ChecklistExecutionSerializer,
     SignWorkOrderSerializer,
     TechnicianSignWorkOrderSerializer,
+    UploadSignedPdfSerializer,
     WorkOrderListSerializer,
     WorkOrderPhotoSerializer,
     WorkOrderSerializer,
@@ -158,6 +159,50 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         ot.technician_signature = serializer.validated_data["technician_signature"]
         ot.technician_signed_at = timezone.now()
         ot.save(update_fields=["technician_signature", "technician_signed_at"])
+        return Response(WorkOrderSerializer(ot).data)
+
+    @action(detail=True, methods=["post"], url_path="upload-signed-pdf")
+    def upload_signed_pdf(self, request, pk=None):
+        """Register the OT already signed with electronic certificates.
+
+        Dimed and the client sign the PDF outside the system with their own
+        certificates; this receives the finished document, which becomes the
+        official record for that OT in place of the hand-drawn rubrics.
+        """
+        ot = self.get_object()
+        if ot.status != WorkOrder.Status.PENDING_SIGNATURE:
+            return Response(
+                {"detail": "La OT debe estar pendiente de firma."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = UploadSignedPdfSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ot.electronic_signature_document = serializer.validated_data[
+            "electronic_signature_document"
+        ]
+        ot.client_signer_name = serializer.validated_data["client_signer_name"]
+        ot.client_signer_position = serializer.validated_data["client_signer_position"]
+        ot.signed_at = timezone.now()
+        ot.status = WorkOrder.Status.SIGNED
+        ot.save(update_fields=[
+            "electronic_signature_document", "client_signer_name",
+            "client_signer_position", "signed_at", "status",
+        ])
+
+        create_audit_log(
+            user=request.user,
+            action=AuditLog.Action.SIGN,
+            model_name="WorkOrder",
+            object_id=str(ot.id),
+            details={
+                "number": ot.number,
+                "signer": ot.client_signer_name,
+                "medio": "firma electrónica",
+            },
+            request=request,
+        )
         return Response(WorkOrderSerializer(ot).data)
 
     @action(detail=True, methods=["post"])

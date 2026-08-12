@@ -169,3 +169,71 @@ class TechnicianSignatureWindowTests(TestCase):
         self.assertEqual(self._sign(ot).status_code, 400)
         ot.refresh_from_db()
         self.assertIsNone(ot.technician_signed_at)
+
+
+class UploadSignedPdfTests(TestCase):
+    """Registering the OT signed with electronic certificates."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org, cls.equipment, cls.technician, cls.coordinator = make_fixtures()
+
+    def setUp(self):
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.coordinator)
+
+    def _ot(self, status=WorkOrder.Status.PENDING_SIGNATURE):
+        return WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.CORRECTIVE, equipment=self.equipment,
+            client=self.client_org, technician=self.technician, status=status,
+        )
+
+    def _pdf(self, *, signed=True, name="ot-firmada.pdf"):
+        body = b"%PDF-1.7\n" + (b"/ByteRange [0 100 200 300]\n" if signed else b"")
+        return SimpleUploadedFile(name, body + b"%%EOF", content_type="application/pdf")
+
+    def _upload(self, ot, **overrides):
+        payload = {
+            "electronic_signature_document": self._pdf(),
+            "client_signer_name": "Ana Ruiz",
+            "client_signer_position": "Jefe de Imagen",
+        }
+        payload.update(overrides)
+        return self.api.post(
+            f"/api/v1/work-orders/{ot.id}/upload-signed-pdf/", payload, format="multipart"
+        )
+
+    def test_upload_marks_the_ot_as_signed(self):
+        ot = self._ot()
+        resp = self._upload(ot)
+        self.assertEqual(resp.status_code, 200, resp.content[:300])
+        ot.refresh_from_db()
+        self.assertEqual(ot.status, WorkOrder.Status.SIGNED)
+        self.assertTrue(ot.electronic_signature_document)
+        self.assertEqual(ot.client_signer_name, "Ana Ruiz")
+        self.assertIsNotNone(ot.signed_at)
+
+    def test_rejects_a_pdf_without_a_signature(self):
+        ot = self._ot()
+        resp = self._upload(ot, electronic_signature_document=self._pdf(signed=False))
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("firma electrónica", str(resp.json()))
+        ot.refresh_from_db()
+        self.assertEqual(ot.status, WorkOrder.Status.PENDING_SIGNATURE)
+
+    def test_rejects_a_file_that_is_not_a_pdf(self):
+        ot = self._ot()
+        bad = SimpleUploadedFile("ot.docx", b"PK\x03\x04", content_type="application/msword")
+        resp = self._upload(ot, electronic_signature_document=bad)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_requires_the_signer_name(self):
+        ot = self._ot()
+        resp = self._upload(ot, client_signer_name="")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_rejects_an_ot_that_is_not_pending_signature(self):
+        for state in (WorkOrder.Status.IN_PROGRESS, WorkOrder.Status.SIGNED,
+                      WorkOrder.Status.CLOSED):
+            ot = self._ot(state)
+            self.assertEqual(self._upload(ot).status_code, 400, state)
