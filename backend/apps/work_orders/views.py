@@ -20,6 +20,7 @@ from .serializers import (
     WorkOrderSerializer,
     WorkOrderSparePartSerializer,
 )
+from .services.ai_writer import WritingAssistantUnavailable, draft_work_order_text
 from .tasks import generate_work_order_pdf, send_work_order_signed_email
 
 
@@ -88,6 +89,36 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         ot.started_at = timezone.now()
         ot.save(update_fields=["status", "arrival_at", "started_at"])
         return Response(WorkOrderSerializer(ot).data)
+
+    @action(detail=True, methods=["post"], url_path="assist-writing")
+    def assist_writing(self, request, pk=None):
+        """Draft the OT's technical fields from the technician's raw notes.
+
+        Returns a proposal only — the technician reviews and saves it. Nothing
+        is written to the OT here: the signed OT certifies the service, so the
+        text must pass through the person who performed it.
+        """
+        ot = self.get_object()
+        if ot.status == WorkOrder.Status.CLOSED:
+            return Response(
+                {"detail": "Una OT cerrada no puede modificarse."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_notes = (request.data.get("notes") or "").strip()
+        if len(raw_notes) < 20:
+            return Response(
+                {"detail": "Escriba sus notas de campo antes de usar el asistente."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            draft = draft_work_order_text(ot, raw_notes)
+        except WritingAssistantUnavailable as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        return Response(draft)
 
     @action(detail=True, methods=["post"])
     def finish(self, request, pk=None):

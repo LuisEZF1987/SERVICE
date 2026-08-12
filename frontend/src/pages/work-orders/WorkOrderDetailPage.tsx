@@ -12,6 +12,7 @@ import Badge, { StatusBadge, PriorityBadge } from '../../components/ui/Badge'
 import { Select, Textarea } from '../../components/ui/Input'
 import WorkOrderFormModal from './WorkOrderFormModal'
 import SignWorkOrderModal from './SignWorkOrderModal'
+import WritingAssistantModal from './WritingAssistantModal'
 import WorkOrderChecklistSection from './WorkOrderChecklistSection'
 import WorkOrderSparePartsSection from './WorkOrderSparePartsSection'
 import WorkOrderPhotosSection from './WorkOrderPhotosSection'
@@ -98,6 +99,8 @@ export default function WorkOrderDetailPage() {
   const [closeResult, setCloseResult] = useState('RESOLVED')
   const [diagnosisDirty, setDiagnosisDirty] = useState(false)
   const [workPerformedDirty, setWorkPerformedDirty] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [followUpNotes, setFollowUpNotes] = useState('')
 
   const { data: workOrder, isLoading } = useQuery({
     queryKey: ['work-order', id],
@@ -111,6 +114,7 @@ export default function WorkOrderDetailPage() {
     if (!workOrder) return
     if (!diagnosisDirty) setDiagnosis(workOrder.diagnosis || '')
     if (!workPerformedDirty) setWorkPerformed(workOrder.work_performed || '')
+    if (!diagnosisDirty) setFollowUpNotes(workOrder.follow_up_notes || '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workOrder])
 
@@ -477,6 +481,20 @@ export default function WorkOrderDetailPage() {
             {/* Editable fields when IN_PROGRESS */}
             {status === 'IN_PROGRESS' ? (
               <>
+                <div className="flex justify-end mb-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setAssistantOpen(true)}
+                    icon={
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3l1.9 5.8L20 10.7l-5.1 3.4L15.5 20 12 16.8 8.5 20l.6-5.9L4 10.7l6.1-1.9z" />
+                      </svg>
+                    }
+                  >
+                    Asistente de redacción
+                  </Button>
+                </div>
                 <Textarea
                   label="Diagnostico"
                   value={diagnosis}
@@ -497,6 +515,16 @@ export default function WorkOrderDetailPage() {
                   placeholder="Describe el trabajo realizado..."
                   rows={3}
                 />
+                <Textarea
+                  label="Notas de Seguimiento"
+                  value={followUpNotes}
+                  onChange={(e) => {
+                    setFollowUpNotes(e.target.value)
+                    setDiagnosisDirty(true)
+                  }}
+                  placeholder="Pendientes o recomendaciones para el cliente..."
+                  rows={2}
+                />
                 {(diagnosisDirty || workPerformedDirty) && (
                   <div className="flex justify-end mt-2">
                     <Button
@@ -506,6 +534,7 @@ export default function WorkOrderDetailPage() {
                         updateMutation.mutate({
                           diagnosis,
                           work_performed: workPerformed,
+                          follow_up_notes: followUpNotes,
                         } as Partial<WorkOrder>)
                       }
                       disabled={updateMutation.isPending}
@@ -683,6 +712,25 @@ export default function WorkOrderDetailPage() {
         mode={signMode ?? 'client'}
         onClose={() => setSignMode(null)}
         workOrderId={workOrder.id}
+      />
+
+      {/* Writing assistant — fills the form, does not save */}
+      <WritingAssistantModal
+        workOrder={workOrder}
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onApply={(draft) => {
+          if (draft.diagnosis) {
+            setDiagnosis(draft.diagnosis)
+            setDiagnosisDirty(true)
+          }
+          if (draft.work_performed) {
+            setWorkPerformed(draft.work_performed)
+            setWorkPerformedDirty(true)
+          }
+          if (draft.follow_up_notes) setFollowUpNotes(draft.follow_up_notes)
+          if (draft.result) setCloseResult(draft.result)
+        }}
       />
     </div>
   )

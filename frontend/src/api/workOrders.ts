@@ -80,12 +80,25 @@ export interface WorkOrder {
   updated_at: string
 }
 
+/** Proposal from the writing assistant — reviewed by the technician before saving. */
+export interface WorkOrderDraft {
+  diagnosis: string
+  work_performed: string
+  follow_up_notes: string
+  result: string
+  /** Data the OT usually carries that the notes didn't mention. */
+  omitted: string[]
+}
+
 export const workOrdersApi = {
   list: (params?: Record<string, string>) => api.get<{ results: WorkOrder[]; count: number }>('/work-orders/', { params }),
   get: (id: string) => api.get<WorkOrder>(`/work-orders/${id}/`),
   create: (data: Partial<WorkOrder>) => api.post<WorkOrder>('/work-orders/', data),
   update: (id: string, data: Partial<WorkOrder>) => api.patch<WorkOrder>(`/work-orders/${id}/`, data),
   delete: (id: string) => api.delete(`/work-orders/${id}/`),
+  /** Draft the technical fields from the technician's raw notes (proposal only). */
+  assistWriting: (id: string, notes: string) =>
+    api.post<WorkOrderDraft>(`/work-orders/${id}/assist-writing/`, { notes }),
   start: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/start/`),
   finish: (id: string) => api.post<WorkOrder>(`/work-orders/${id}/finish/`),
   sign: (id: string, data: FormData) => api.post<WorkOrder>(`/work-orders/${id}/sign/`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
