@@ -2,6 +2,7 @@
 guardrails around it, not the model's output quality."""
 from unittest.mock import patch
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -108,3 +109,63 @@ class AssistantConfigurationTests(TestCase):
 
         with self.assertRaises(WritingAssistantUnavailable):
             draft_work_order_text(None, NOTES)
+
+
+class TechnicianSignatureWindowTests(TestCase):
+    """The technician can sign until the client's signature closes the document."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org, cls.equipment, cls.technician, _ = make_fixtures()
+
+    def setUp(self):
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.technician)
+
+    def _ot(self, status):
+        return WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.CORRECTIVE, equipment=self.equipment,
+            client=self.client_org, technician=self.technician, status=status,
+        )
+
+    def _sign(self, ot):
+        # ImageField needs a file Pillow can actually open
+        import io
+
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (2, 2), "white").save(buffer, format="PNG")
+        png = SimpleUploadedFile(
+            "firma.png", buffer.getvalue(), content_type="image/png"
+        )
+        return self.api.post(
+            f"/api/v1/work-orders/{ot.id}/technician_sign/",
+            {"technician_signature": png}, format="multipart",
+        )
+
+    def test_can_sign_while_in_progress(self):
+        ot = self._ot(WorkOrder.Status.IN_PROGRESS)
+        self.assertEqual(self._sign(ot).status_code, 200)
+        ot.refresh_from_db()
+        self.assertIsNotNone(ot.technician_signed_at)
+
+    def test_can_still_sign_after_finishing_the_work(self):
+        # The reason this test exists: finishing used to hide the button and
+        # leave the OT with no way to add the technician's rubric.
+        ot = self._ot(WorkOrder.Status.PENDING_SIGNATURE)
+        self.assertEqual(self._sign(ot).status_code, 200, "sin firma tras finalizar")
+        ot.refresh_from_db()
+        self.assertIsNotNone(ot.technician_signed_at)
+
+    def test_cannot_sign_once_the_client_signed(self):
+        ot = self._ot(WorkOrder.Status.SIGNED)
+        self.assertEqual(self._sign(ot).status_code, 400)
+        ot.refresh_from_db()
+        self.assertIsNone(ot.technician_signed_at)
+
+    def test_cannot_sign_a_closed_work_order(self):
+        ot = self._ot(WorkOrder.Status.CLOSED)
+        self.assertEqual(self._sign(ot).status_code, 400)
+        ot.refresh_from_db()
+        self.assertIsNone(ot.technician_signed_at)

@@ -255,6 +255,15 @@ export default function WorkOrderDetailPage() {
           {finishMutation.isPending ? 'Finalizando...' : 'Finalizar Trabajo'}
         </Button>
       )
+    }
+
+    // The technician can still sign after finishing the work: the client's
+    // signature closes the document, so until then the rubric is still missing
+    // from the PDF and there is no reason to hide the button.
+    if (
+      (status === 'IN_PROGRESS' || status === 'PENDING_SIGNATURE') &&
+      !workOrder.technician_signed_at
+    ) {
       buttons.push(
         <Button
           key="tech-sign"
@@ -687,6 +696,13 @@ export default function WorkOrderDetailPage() {
               className="pt-3 mt-2"
               style={{ borderTop: '1px solid var(--card-border)' }}
             >
+              <InfoField label="Firma del Técnico">
+                {workOrder.technician_signed_at ? (
+                  <Badge variant="success">Firmada</Badge>
+                ) : (
+                  <Badge variant="secondary">Sin firma</Badge>
+                )}
+              </InfoField>
               <InfoField label="Firma del Cliente">
                 {workOrder.is_signed_by_client ? (
                   <Badge variant="success">Firmada</Badge>
@@ -694,6 +710,21 @@ export default function WorkOrderDetailPage() {
                   <Badge variant="secondary">Sin firma</Badge>
                 )}
               </InfoField>
+              {status === 'PENDING_SIGNATURE' && !workOrder.technician_signed_at && (
+                <div
+                  className="p-3 text-[0.78rem]"
+                  style={{
+                    background: 'rgba(251,191,36,0.07)',
+                    border: '1px solid rgba(251,191,36,0.25)',
+                    borderRadius: '10px',
+                    color: '#fde68a',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Firme como técnico antes de que firme el cliente. La firma del
+                  cliente cierra el documento y genera el PDF que se le envía.
+                </div>
+              )}
             </div>
           </Card>
         </div>

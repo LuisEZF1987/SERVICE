@@ -136,8 +136,22 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def technician_sign(self, request, pk=None):
-        """Capture the assigned technician's signature (rubric) on the OT."""
+        """Capture the assigned technician's signature (rubric) on the OT.
+
+        Allowed while the work is in progress and after it is finished — the
+        client's signature is what closes the document, so until then the
+        rubric is simply still missing from it.
+        """
         ot = self.get_object()
+        if ot.status not in (
+            WorkOrder.Status.IN_PROGRESS,
+            WorkOrder.Status.PENDING_SIGNATURE,
+        ):
+            return Response(
+                {"detail": "La OT ya fue firmada por el cliente y no admite cambios."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = TechnicianSignWorkOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
