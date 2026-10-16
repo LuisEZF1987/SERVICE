@@ -17,6 +17,7 @@ import UploadSignedPdfModal from './UploadSignedPdfModal'
 import WorkOrderChecklistSection from './WorkOrderChecklistSection'
 import WorkOrderSparePartsSection from './WorkOrderSparePartsSection'
 import WorkOrderPhotosSection from './WorkOrderPhotosSection'
+import WorkOrderQCReportsSection from './WorkOrderQCReportsSection'
 
 const RESULT_OPTIONS = [
   { value: 'RESOLVED', label: 'Resuelto' },
@@ -604,6 +605,7 @@ export default function WorkOrderDetailPage() {
           <WorkOrderChecklistSection workOrder={workOrder} editable={evidenceEditable} />
           <WorkOrderSparePartsSection workOrder={workOrder} editable={evidenceEditable} />
           <WorkOrderPhotosSection workOrder={workOrder} editable={evidenceEditable} />
+          <WorkOrderQCReportsSection workOrder={workOrder} editable={evidenceEditable} />
         </div>
 
         {/* Column 3: Sidebar */}

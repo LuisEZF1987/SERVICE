@@ -19,6 +19,7 @@ import TicketDetailPage from './pages/tickets/TicketDetailPage'
 import ManualsPage from './pages/manuals/ManualsPage'
 import QuotesPage from './pages/quotes/QuotesPage'
 import QuoteDetailPage from './pages/quotes/QuoteDetailPage'
+import QCReportPage from './pages/qc-reports/QCReportPage'
 import MainLayout from './layouts/MainLayout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="/quotes/:id" element={<QuoteDetailPage />} />
                 <Route path="/work-orders" element={<WorkOrdersPage />} />
                 <Route path="/work-orders/:id" element={<WorkOrderDetailPage />} />
+                <Route path="/qc-reports/:id" element={<QCReportPage />} />
                 <Route path="/contracts" element={<ContractsPage />} />
                 <Route path="/scheduling" element={<SchedulingPage />} />
                 <Route path="/spare-parts" element={<SparePartsPage />} />
