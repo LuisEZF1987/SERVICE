@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { AxiosError } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { workOrdersApi, WorkOrder } from '../../api/workOrders'
@@ -44,7 +45,9 @@ export default function UploadSignedPdfModal({ workOrder, open, onClose }: Props
       toast.success('OT firmada registrada.')
       close()
     },
-    onError: (err: any) => {
+    onError: (
+      err: AxiosError<{ detail?: string; electronic_signature_document?: string[]; client_signer_name?: string[] }>,
+    ) => {
       const data = err?.response?.data
       const detail =
         data?.electronic_signature_document?.[0] ||

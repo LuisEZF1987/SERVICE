@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { AxiosError } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { clientsApi, Client } from '../../api/clients'
@@ -40,7 +41,7 @@ export default function NDAUploadModal({ client, open, onClose }: Props) {
       toast.success('NDA registrado. El cliente quedó activo.')
       close()
     },
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ detail?: string; nda_document?: string[]; nda_signed_date?: string[] }>) => {
       const data = err?.response?.data
       const detail =
         data?.nda_document?.[0] ||

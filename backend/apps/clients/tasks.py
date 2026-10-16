@@ -69,7 +69,7 @@ def send_nda_for_signature(self, client_id):
         email.send(fail_silently=False)
     except Exception as exc:
         logger.exception("Failed to send NDA to %s", client.name)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     logger.info("Sent NDA for signature to %s (%s)", client.name, recipients)
     return recipients
