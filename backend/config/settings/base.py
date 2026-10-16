@@ -52,6 +52,7 @@ LOCAL_APPS = [
     "apps.spare_parts",
     "apps.reports",
     "apps.qc_reports",
+    "apps.instruments",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -191,6 +192,12 @@ CELERY_BEAT_SCHEDULE = {
         # and flag overdue preventive maintenances.
         "task": "apps.scheduling.tasks.process_maintenance_schedule",
         "schedule": crontab(hour=7, minute=0),
+    },
+    "process-calibration-alerts": {
+        # Daily at 07:15: email staff 90/30/7 days before an instrument's
+        # calibration expires, and once when it has expired.
+        "task": "apps.instruments.tasks.process_calibration_alerts",
+        "schedule": crontab(hour=7, minute=15),
     },
     "escalate-overdue-tickets": {
         # Every 30 minutes: tickets past their contract SLA get escalated

@@ -20,6 +20,7 @@ import ManualsPage from './pages/manuals/ManualsPage'
 import QuotesPage from './pages/quotes/QuotesPage'
 import QuoteDetailPage from './pages/quotes/QuoteDetailPage'
 import QCReportPage from './pages/qc-reports/QCReportPage'
+import InstrumentsPage from './pages/instruments/InstrumentsPage'
 import MainLayout from './layouts/MainLayout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -69,6 +70,7 @@ export default function App() {
                 <Route path="/scheduling" element={<SchedulingPage />} />
                 <Route path="/spare-parts" element={<SparePartsPage />} />
                 <Route path="/manuals" element={<ManualsPage />} />
+                <Route path="/instruments" element={<InstrumentsPage />} />
                 <Route path="/catalog" element={<CatalogPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/users" element={<UsersPage />} />

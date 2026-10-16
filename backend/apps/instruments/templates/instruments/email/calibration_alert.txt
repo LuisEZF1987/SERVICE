@@ -1,0 +1,14 @@
+{% if expired %}CALIBRACION VENCIDA{% else %}Recordatorio de calibracion de instrumento{% endif %}
+
+Instrumento: {{ i.name }}
+Marca / modelo: {{ i.brand }} {{ i.model_name }}
+Numero de serie: {{ i.serial_number }}
+{% if i.assigned_to %}Ubicacion / asignado a: {{ i.assigned_to }}
+{% endif %}Ultima calibracion: {{ i.last_calibration_date|date:"d/m/Y"|default:"-" }}
+Vencimiento: {{ i.calibration_due_date|date:"d/m/Y" }}
+
+{% if expired %}La calibracion de este instrumento esta VENCIDA. No debe usarse en mediciones que se reportan en los informes de control de calidad hasta que se calibre y se registre el nuevo certificado en DimedService.{% else %}Faltan {{ days }} dia(s) para que venza la calibracion. Coordine el envio del instrumento a un laboratorio acreditado y registre el nuevo certificado en DimedService.{% endif %}
+
+--
+DimedService - Sistema de Servicio Tecnico
+Dimed Healthcare S.A.
