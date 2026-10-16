@@ -149,7 +149,11 @@ class InstrumentApiTests(TestCase):
         make_instrument(serial_number="soon", calibration_due_date=today + timedelta(days=40))
         make_instrument(serial_number="ok", calibration_due_date=today + timedelta(days=300))
         self.api.force_authenticate(self.coord)
-        serials = lambda q: [i["serial_number"] for i in self.api.get(f"/api/v1/instruments/?calibration={q}").data["results"]]
+
+        def serials(q):
+            res = self.api.get(f"/api/v1/instruments/?calibration={q}")
+            return [i["serial_number"] for i in res.data["results"]]
+
         self.assertEqual(serials("expired"), ["exp"])
         self.assertEqual(serials("due_soon"), ["soon"])
         self.assertEqual(serials("valid"), ["ok"])
