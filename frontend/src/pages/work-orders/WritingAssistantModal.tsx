@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AxiosError } from 'axios'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { workOrdersApi, WorkOrder, WorkOrderDraft } from '../../api/workOrders'
@@ -66,7 +67,7 @@ export default function WritingAssistantModal({ workOrder, open, onClose, onAppl
   const mutation = useMutation({
     mutationFn: () => workOrdersApi.assistWriting(workOrder.id, notes),
     onSuccess: (res) => setDraft(res.data),
-    onError: (err: any) => {
+    onError: (err: AxiosError<{ detail?: string }>) => {
       toast.error(err?.response?.data?.detail || 'No se pudo redactar el texto.')
     },
   })

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AxiosError } from 'axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -62,7 +63,8 @@ export default function ClientDetailPage() {
     try {
       const res = await clientsApi.sendNda(client.id)
       toast.success(res.data.detail)
-    } catch (err: any) {
+    } catch (e) {
+      const err = e as AxiosError<{ detail?: string }>
       toast.error(err?.response?.data?.detail || 'No se pudo enviar el NDA.')
     } finally {
       setSendingNda(false)
