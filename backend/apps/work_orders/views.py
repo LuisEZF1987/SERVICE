@@ -55,6 +55,8 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
+        if self.action == "list":
+            qs = qs.prefetch_related("qc_reports")
 
         if user.role == "TECHNICIAN":
             # Technicians only see their own assigned OTs

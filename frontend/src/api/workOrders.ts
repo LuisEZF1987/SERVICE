@@ -67,6 +67,8 @@ export interface WorkOrder {
   travel_cost: string | number
   is_signed_by_client: boolean
   total_spare_parts_cost: string | number
+  /** Only in list responses: QC reports of the OT. */
+  qc_reports_summary?: { total: number; signed: number }
   photos: WorkOrderPhoto[]
   spare_parts_used: WorkOrderSparePartUsed[]
   checklist_items: ChecklistItem[]

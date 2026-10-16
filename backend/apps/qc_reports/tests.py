@@ -155,3 +155,56 @@ class QCReportApiTests(TestCase):
             html = render_qc_report_html(report)
             self.assertIn(report.number, html)
             self.assertNotIn("Representante del Cliente", html)
+
+
+class QCReportDeleteAndDashboardTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org, cls.equipment, cls.technician, cls.coordinator = make_fixtures()
+        cls.admin = User.objects.create_user(username="admin1", password="pw", role=User.Role.ADMIN)
+        cls.superuser = User.objects.create_user(
+            username="root", password="pw", role=User.Role.ADMIN, is_superuser=True, is_staff=True
+        )
+        cls.ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.PREVENTIVE, equipment=cls.equipment, technician=cls.technician
+        )
+
+    def setUp(self):
+        self.api = APIClient()
+
+    def _report(self, **kw):
+        return QCReport.objects.create(work_order=self.ot, practice="RX", **kw)
+
+    def test_only_admin_deletes(self):
+        report = self._report()
+        self.api.force_authenticate(self.coordinator)
+        self.assertEqual(self.api.delete(f"/api/v1/qc-reports/{report.id}/").status_code, 403)
+        self.api.force_authenticate(self.admin)
+        self.assertEqual(self.api.delete(f"/api/v1/qc-reports/{report.id}/").status_code, 204)
+        self.assertFalse(QCReport.objects.filter(pk=report.pk).exists())
+
+    def test_signed_report_cannot_be_deleted(self):
+        report = self._report(status=QCReport.Status.SIGNED)
+        self.api.force_authenticate(self.admin)
+        self.assertEqual(self.api.delete(f"/api/v1/qc-reports/{report.id}/").status_code, 403)
+
+    def test_me_exposes_superuser_flag(self):
+        self.api.force_authenticate(self.superuser)
+        self.assertTrue(self.api.get("/api/v1/auth/me/").data["is_superuser"])
+
+    def test_list_includes_client_and_ot_summary(self):
+        self._report()
+        self._report(status=QCReport.Status.SIGNED)
+        self.api.force_authenticate(self.coordinator)
+        row = self.api.get("/api/v1/qc-reports/").data["results"][0]
+        self.assertEqual(row["client_name"], self.client_org.name)
+        ot_row = self.api.get("/api/v1/work-orders/").data["results"][0]
+        self.assertEqual(ot_row["qc_reports_summary"], {"total": 2, "signed": 1})
+
+    def test_dashboard_counts_pending_reports(self):
+        self._report()
+        self._report(status=QCReport.Status.ISSUED)
+        self.api.force_authenticate(self.coordinator)
+        data = self.api.get("/api/v1/dashboard/stats/").data
+        self.assertEqual((data["qc_draft"], data["qc_pending_signature"]), (1, 1))
+        self.assertIn("instruments_expired", data)

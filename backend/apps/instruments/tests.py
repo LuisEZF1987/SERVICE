@@ -135,6 +135,14 @@ class InstrumentApiTests(TestCase):
         res = self.api.post("/api/v1/instruments/", {"name": "x", "brand": "x", "model_name": "x", "serial_number": "z"}, format="json")
         self.assertEqual(res.status_code, 403)
 
+    def test_only_admin_deletes_instruments(self):
+        inst = make_instrument()
+        self.api.force_authenticate(self.coord)
+        self.assertEqual(self.api.delete(f"/api/v1/instruments/{inst.id}/").status_code, 403)
+        admin = User.objects.create_user(username="adm", password="pw", role=User.Role.ADMIN)
+        self.api.force_authenticate(admin)
+        self.assertEqual(self.api.delete(f"/api/v1/instruments/{inst.id}/").status_code, 204)
+
     def test_filter_by_calibration_state(self):
         today = timezone.localdate()
         make_instrument(serial_number="exp", calibration_due_date=today - timedelta(days=3))

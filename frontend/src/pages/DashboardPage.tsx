@@ -86,7 +86,7 @@ export default function DashboardPage() {
           <EmptyState message="No hay mantenimientos programados esta semana" />
         </Card>
         <Card title="Alertas">
-          <EmptyState message="Sin alertas pendientes" />
+          <AlertsList stats={stats} />
         </Card>
       </div>
     </div>
@@ -201,6 +201,74 @@ function EmptyState({ message }: { message: string }) {
         <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13,2 13,9 20,9"/>
       </svg>
       <p className="text-[0.82rem]">{message}</p>
+    </div>
+  )
+}
+
+interface AlertItem {
+  count: number
+  text: string
+  href: string
+  color: string
+}
+
+/** Pending QC reports and instrument calibrations, each linking to the filtered list. */
+function AlertsList({ stats }: { stats?: Record<string, number> }) {
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  const items: AlertItem[] = [
+    {
+      count: stats?.instruments_expired ?? 0,
+      text: plural(stats?.instruments_expired ?? 0, 'instrumento con calibración vencida', 'instrumentos con calibración vencida'),
+      href: '/instruments',
+      color: '#f87171',
+    },
+    {
+      count: stats?.instruments_due_soon ?? 0,
+      text: plural(stats?.instruments_due_soon ?? 0, 'instrumento vence en menos de 3 meses', 'instrumentos vencen en menos de 3 meses'),
+      href: '/instruments',
+      color: '#fb923c',
+    },
+    {
+      count: stats?.instruments_no_record ?? 0,
+      text: plural(stats?.instruments_no_record ?? 0, 'instrumento sin calibración registrada', 'instrumentos sin calibración registrada'),
+      href: '/instruments',
+      color: '#facc15',
+    },
+    {
+      count: stats?.qc_pending_signature ?? 0,
+      text: plural(stats?.qc_pending_signature ?? 0, 'informe QC pendiente de firma', 'informes QC pendientes de firma'),
+      href: '/qc-reports?status=ISSUED',
+      color: '#fb923c',
+    },
+    {
+      count: stats?.qc_draft ?? 0,
+      text: plural(stats?.qc_draft ?? 0, 'informe QC en borrador', 'informes QC en borrador'),
+      href: '/qc-reports?status=DRAFT',
+      color: '#60a5fa',
+    },
+  ].filter((i) => i.count > 0)
+
+  if (items.length === 0) return <EmptyState message="Sin alertas pendientes" />
+
+  return (
+    <div className="flex flex-col gap-2">
+      {items.map((i) => (
+        <Link
+          key={i.text}
+          to={i.href}
+          className="flex items-center gap-3 px-3 py-2.5 text-[0.82rem] font-medium"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--card-border)',
+            borderLeft: `3px solid ${i.color}`,
+            borderRadius: '10px',
+            color: '#cbd5e1',
+          }}
+        >
+          <span className="flex-1">{i.text}</span>
+          <span style={{ color: i.color }}>→</span>
+        </Link>
+      ))}
     </div>
   )
 }

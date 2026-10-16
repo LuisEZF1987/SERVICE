@@ -77,6 +77,9 @@ export interface QCReportSummary {
   number: string
   work_order: string
   work_order_number: string
+  equipment_code: string
+  client_name: string
+  technician_name: string
   practice: string
   practice_display: string
   status: 'DRAFT' | 'ISSUED' | 'SIGNED'
@@ -88,9 +91,6 @@ export interface QCReportSummary {
 }
 
 export interface QCReport extends QCReportSummary {
-  equipment_code: string
-  client_name: string
-  technician_name: string
   format_code: string
   techniques: string[]
   photo_slots: { slot: string; label: string }[]
@@ -122,6 +122,8 @@ export interface QCPractice {
 }
 
 export const qcReportsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<{ results: QCReportSummary[]; count: number }>('/qc-reports/', { params }),
   practices: () => api.get<QCPractice[]>('/qc-reports/practices/'),
   listForWorkOrder: (workOrderId: string) =>
     api.get<{ results: QCReportSummary[]; count: number }>('/qc-reports/', {
