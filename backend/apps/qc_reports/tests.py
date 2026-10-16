@@ -1,0 +1,157 @@
+from unittest.mock import patch
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
+from rest_framework.test import APIClient
+
+from apps.accounts.models import User
+from apps.work_orders.models import WorkOrder
+from apps.work_orders.tests import make_fixtures
+
+from .models import QCReport
+from .protocols import PROTOCOLS, initial_report_data
+from .services.pdf import hvl_rows, radiation_rows, render_qc_report_html
+
+FAKE_PDF = b"%PDF-1.4 fake"
+
+
+class ProtocolTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org, cls.equipment, cls.technician, _ = make_fixtures()
+        cls.ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.PREVENTIVE, equipment=cls.equipment, technician=cls.technician
+        )
+
+    def test_every_practice_builds_initial_data(self):
+        for practice, protocol in PROTOCOLS.items():
+            data = initial_report_data(self.ot, practice)
+            self.assertEqual(len(data["tests"]), len(protocol["tests"]), practice)
+            self.assertEqual(data["equipment_data"]["serial"], self.equipment.serial_number)
+            self.assertEqual(data["institution"]["ruc"], self.client_org.ruc)
+            self.assertEqual(len(data["radiation_levels"]["rows"]), 10)
+
+    def test_ct_report_has_no_ctdi_test(self):
+        labels = " ".join(t for t, _ in PROTOCOLS["CT"]["tests"])
+        self.assertNotIn("CTDI", labels)
+
+    def test_only_mammography_has_phantom_score(self):
+        for practice in PROTOCOLS:
+            data = initial_report_data(self.ot, practice)
+            self.assertEqual(bool(data["mammo_score"]), practice == "MAMMO")
+
+    def test_hvl_percent_relative_to_d0(self):
+        rows = hvl_rows({"rows": [{"thickness": "0.0", "dose": "200"}, {"thickness": "2.5", "dose": "100,0"}]})
+        self.assertEqual(rows[0]["pct"], "100")
+        self.assertEqual(rows[1]["pct"], "50")
+
+    def test_radiation_net_subtracts_background(self):
+        rows = radiation_rows({"rows": [{"measured": "0.45", "background": "0.15"}, {"measured": ""}]})
+        self.assertEqual(rows[0]["net"], "0.3")
+        self.assertEqual(rows[1]["net"], "")
+
+
+@override_settings(MEDIA_ROOT="/tmp/test-media-qc")
+class QCReportApiTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org, cls.equipment, cls.technician, cls.coordinator = make_fixtures()
+        cls.other_tech = User.objects.create_user(
+            username="tecnico2", password="pw", role=User.Role.TECHNICIAN
+        )
+        cls.ot = WorkOrder.objects.create(
+            ot_type=WorkOrder.Type.PREVENTIVE, equipment=cls.equipment, technician=cls.technician
+        )
+
+    def setUp(self):
+        self.api = APIClient()
+        self.api.force_authenticate(self.technician)
+
+    def _create(self, practice="RX"):
+        res = self.api.post("/api/v1/qc-reports/", {"work_order": str(self.ot.id), "practice": practice}, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        return res.data
+
+    def test_create_initializes_report_from_protocol(self):
+        data = self._create("MAMMO")
+        self.assertTrue(data["number"].startswith("DIMED-IM-"))
+        self.assertEqual(data["format_code"], "9.1.2")
+        self.assertEqual(data["service_type"], "PREVENTIVE")
+        self.assertEqual(len(data["tests"]), len(PROTOCOLS["MAMMO"]["tests"]))
+        self.assertEqual(data["status"], "DRAFT")
+
+    def test_other_technician_cannot_create_or_see(self):
+        self._create()
+        self.api.force_authenticate(self.other_tech)
+        res = self.api.post("/api/v1/qc-reports/", {"work_order": str(self.ot.id), "practice": "RX"}, format="json")
+        self.assertEqual(res.status_code, 403)
+        self.assertEqual(self.api.get("/api/v1/qc-reports/").data["count"], 0)
+
+    def test_update_measurements(self):
+        data = self._create()
+        tests = data["tests"]
+        tests[0].update({"m1": "60.8", "m2": "61.0", "m3": "60.9", "result": "PASS"})
+        res = self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"tests": tests}, format="json")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(QCReport.objects.get(pk=data["id"]).tests[0]["m1"], "60.8")
+
+    def test_rejects_malformed_json_sections(self):
+        data = self._create()
+        res = self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"tests": {"a": 1}}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_generate_requires_overall_result(self):
+        data = self._create()
+        res = self.api.post(f"/api/v1/qc-reports/{data['id']}/generate-pdf/")
+        self.assertEqual(res.status_code, 400)
+
+    @patch("apps.qc_reports.views.render_qc_report_pdf", return_value=FAKE_PDF)
+    def test_full_flow_generate_sign_lock(self, _render):
+        data = self._create()
+        self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"overall_result": "PASS"}, format="json")
+
+        res = self.api.post(f"/api/v1/qc-reports/{data['id']}/generate-pdf/")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["status"], "ISSUED")
+        self.assertTrue(res.data["pdf_document"])
+
+        signed = SimpleUploadedFile("firmado.pdf", FAKE_PDF, content_type="application/pdf")
+        res = self.api.post(f"/api/v1/qc-reports/{data['id']}/upload-signed/", {"signed_document": signed}, format="multipart")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["status"], "SIGNED")
+
+        res = self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"observations": "x"}, format="json")
+        self.assertEqual(res.status_code, 403)
+
+    @patch("apps.qc_reports.views.render_qc_report_pdf", return_value=FAKE_PDF)
+    def test_editing_an_issued_report_returns_it_to_draft(self, _render):
+        data = self._create()
+        self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"overall_result": "PASS"}, format="json")
+        self.api.post(f"/api/v1/qc-reports/{data['id']}/generate-pdf/")
+        res = self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"observations": "Corrección"}, format="json")
+        self.assertEqual(res.data["status"], "DRAFT")
+
+    def test_upload_signed_requires_issued_pdf(self):
+        data = self._create()
+        signed = SimpleUploadedFile("firmado.pdf", FAKE_PDF, content_type="application/pdf")
+        res = self.api.post(f"/api/v1/qc-reports/{data['id']}/upload-signed/", {"signed_document": signed}, format="multipart")
+        self.assertEqual(res.status_code, 400)
+
+    def test_photo_slot_must_belong_to_practice(self):
+        data = self._create("CT")
+        img = SimpleUploadedFile("p.gif", b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x00\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;", content_type="image/gif")
+        res = self.api.post(f"/api/v1/qc-reports/{data['id']}/photos/", {"slot": "LIGHT_FIELD", "image": img}, format="multipart")
+        self.assertEqual(res.status_code, 400)
+
+    def test_practices_catalogue(self):
+        res = self.api.get("/api/v1/qc-reports/practices/")
+        self.assertEqual([p["value"] for p in res.data], list(PROTOCOLS))
+
+    def test_html_renders_for_every_practice(self):
+        for practice in PROTOCOLS:
+            report = QCReport.objects.create(
+                work_order=self.ot, practice=practice, **initial_report_data(self.ot, practice)
+            )
+            html = render_qc_report_html(report)
+            self.assertIn(report.number, html)
+            self.assertNotIn("Representante del Cliente", html)
