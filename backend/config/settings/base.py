@@ -40,6 +40,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "common",
     "apps.accounts",
     "apps.clients",
     "apps.equipment",
