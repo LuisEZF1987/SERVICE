@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { qcReportsApi, QCReport, QCResult } from '../../api/qcReports'
+import { instrumentsApi, MeasuringInstrument } from '../../api/instruments'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
@@ -154,6 +155,14 @@ export default function QCReportPage() {
     queryKey: ['qc-report', id],
     queryFn: () => qcReportsApi.get(id!).then((r) => r.data),
     enabled: !!id,
+  })
+
+  // Dimed's instrument inventory, to fill the instruments table and flag
+  // expired calibrations (technicians have read access).
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['instruments', 'active'],
+    queryFn: () => instrumentsApi.list({ status: 'ACTIVE' }).then((r) => r.data.results),
+    staleTime: 5 * 60 * 1000,
   })
 
   useEffect(() => {
@@ -345,9 +354,44 @@ export default function QCReportPage() {
                 {draft.instruments.map((ins, i) => {
                   const set = (k: string, v: string) =>
                     update('instruments', draft.instruments.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
+                  const pick = (inst: MeasuringInstrument | undefined) => {
+                    if (!inst) return
+                    const due = inst.calibration_due_date
+                    update('instruments', draft.instruments.map((x, j) => (j === i ? {
+                      ...x,
+                      model: `${inst.brand} ${inst.model_name}`,
+                      serial: inst.serial_number,
+                      certificate: inst.latest_calibration?.certificate_number ?? '',
+                      valid_until: due ? due.split('-').reverse().join('/') : '',
+                    } : x)))
+                  }
+                  const known = inventory.find((x) => x.serial_number === ins.serial)
+                  const expired = known && ['EXPIRED', 'NO_RECORD'].includes(known.calibration_status)
                   return (
                     <tr key={i}>
-                      <td style={{ ...td, minWidth: 200 }}>{ins.name}</td>
+                      <td style={{ ...td, minWidth: 220 }}>
+                        <div>{ins.name}</div>
+                        {!locked && inventory.length > 0 && (
+                          <select
+                            value=""
+                            onChange={(e) => pick(inventory.find((x) => x.id === e.target.value))}
+                            style={{ ...cellInput, marginTop: 4, textAlign: 'left' }}
+                          >
+                            <option value="" style={{ background: '#0f172a' }}>Elegir del inventario...</option>
+                            {inventory.map((x) => (
+                              <option key={x.id} value={x.id} style={{ background: '#0f172a' }}>
+                                {x.brand} {x.model_name} — S/N {x.serial_number}
+                                {x.calibration_status === 'EXPIRED' ? ' (CALIBRACIÓN VENCIDA)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {expired && (
+                          <div className="text-[0.7rem] mt-1 font-semibold" style={{ color: '#f87171' }}>
+                            {known.calibration_status === 'EXPIRED' ? 'Calibración vencida' : 'Sin calibración registrada'}: no use este instrumento para el informe.
+                          </div>
+                        )}
+                      </td>
                       <td style={td}><CellInput align="left" value={ins.model} onChange={(v) => set('model', v)} disabled={locked} /></td>
                       <td style={td}><CellInput value={ins.serial} onChange={(v) => set('serial', v)} disabled={locked} /></td>
                       <td style={td}><CellInput value={ins.certificate} onChange={(v) => set('certificate', v)} disabled={locked} /></td>
