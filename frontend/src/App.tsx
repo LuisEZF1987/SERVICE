@@ -20,6 +20,7 @@ import ManualsPage from './pages/manuals/ManualsPage'
 import QuotesPage from './pages/quotes/QuotesPage'
 import QuoteDetailPage from './pages/quotes/QuoteDetailPage'
 import QCReportPage from './pages/qc-reports/QCReportPage'
+import QCReportsPage from './pages/qc-reports/QCReportsPage'
 import InstrumentsPage from './pages/instruments/InstrumentsPage'
 import MainLayout from './layouts/MainLayout'
 
@@ -65,6 +66,7 @@ export default function App() {
                 <Route path="/quotes/:id" element={<QuoteDetailPage />} />
                 <Route path="/work-orders" element={<WorkOrdersPage />} />
                 <Route path="/work-orders/:id" element={<WorkOrderDetailPage />} />
+                <Route path="/qc-reports" element={<QCReportsPage />} />
                 <Route path="/qc-reports/:id" element={<QCReportPage />} />
                 <Route path="/contracts" element={<ContractsPage />} />
                 <Route path="/scheduling" element={<SchedulingPage />} />

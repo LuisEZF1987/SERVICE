@@ -16,6 +16,7 @@ export interface User {
   privacy_policy_accepted_at: string | null
   client_organization: string | null
   is_active: boolean
+  is_superuser?: boolean
 }
 
 export interface LoginResponse {

@@ -105,14 +105,20 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     equipment_code = serializers.CharField(source="equipment.internal_code", read_only=True)
     client_name = serializers.CharField(source="client.name", read_only=True)
     technician_name = serializers.CharField(source="technician.get_full_name", read_only=True)
+    qc_reports_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkOrder
         fields = [
             "id", "number", "ot_type", "type_display", "priority", "priority_display",
             "status", "status_display", "equipment_code", "client_name",
-            "technician_name", "opened_at", "result",
+            "technician_name", "opened_at", "result", "qc_reports_summary",
         ]
+
+    def get_qc_reports_summary(self, obj):
+        """{total, signed} of the OT's QC reports (prefetched by the list view)."""
+        statuses = [r.status for r in obj.qc_reports.all()]
+        return {"total": len(statuses), "signed": statuses.count("SIGNED")}
 
 
 class SignWorkOrderSerializer(serializers.Serializer):

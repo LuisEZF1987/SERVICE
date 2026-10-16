@@ -42,6 +42,11 @@ def can_edit(user, work_order):
     return True
 
 
+def can_delete(user):
+    """Deleting records is reserved to administrators."""
+    return user.role == "ADMIN" or user.is_superuser
+
+
 def visible_reports(user):
     """Reports the user may see: technicians their own OTs', clients only signed ones."""
     qs = QCReport.objects.select_related(
@@ -136,7 +141,18 @@ class QCReportViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        self._require_editable(instance)
+        if not can_delete(self.request.user):
+            raise PermissionDenied("Solo un administrador puede eliminar informes.")
+        if instance.is_locked:
+            raise PermissionDenied("Un informe firmado es un registro oficial y no puede eliminarse.")
+        create_audit_log(
+            user=self.request.user,
+            action=AuditLog.Action.DELETE,
+            model_name="QCReport",
+            object_id=str(instance.id),
+            details={"number": instance.number, "work_order": instance.work_order.number},
+            request=self.request,
+        )
         instance.delete()
 
     @action(detail=True, methods=["post"], url_path="generate-pdf")

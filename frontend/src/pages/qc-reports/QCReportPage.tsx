@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AxiosError } from 'axios'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { qcReportsApi, QCReport, QCResult } from '../../api/qcReports'
@@ -150,6 +150,8 @@ export default function QCReportPage() {
   const [draft, setDraft] = useState<QCReport | null>(null)
   const [dirty, setDirty] = useState(false)
   const [signedOpen, setSignedOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const navigate = useNavigate()
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['qc-report', id],
@@ -172,6 +174,8 @@ export default function QCReportPage() {
   const canEdit =
     !!report && report.status !== 'SIGNED' && ['ADMIN', 'COORDINATOR', 'TECHNICIAN'].includes(user?.role ?? '')
   const locked = !canEdit
+  // Deleting is reserved to administrators; a signed report is an official record.
+  const canDelete = !!report && report.status !== 'SIGNED' && (user?.role === 'ADMIN' || !!user?.is_superuser)
 
   const update = <K extends keyof QCReport>(key: K, value: QCReport[K]) => {
     setDraft((d) => (d ? { ...d, [key]: value } : d))
@@ -210,6 +214,16 @@ export default function QCReportPage() {
       toast.success('PDF generado. Descárguelo, fírmelo con FirmaEC y súbalo firmado.')
     },
     onError: (err: ApiError) => toast.error(err?.response?.data?.detail || 'No se pudo generar el PDF'),
+  })
+
+  const deleteReportMutation = useMutation({
+    mutationFn: () => qcReportsApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qc-reports'] })
+      toast.success(`Informe ${report?.number} eliminado`)
+      navigate(`/work-orders/${report?.work_order}`)
+    },
+    onError: (err: ApiError) => toast.error(err?.response?.data?.detail || 'No se pudo eliminar el informe'),
   })
 
   if (isLoading || !draft || !report) {
@@ -259,9 +273,34 @@ export default function QCReportPage() {
                 {generateMutation.isPending ? 'Generando...' : 'Generar PDF'}
               </Button>
             )}
+            {canDelete && (
+              <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+                Eliminar
+              </Button>
+            )}
           </>
         }
       />
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={`Eliminar informe ${draft.number}`}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleteReportMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={() => deleteReportMutation.mutate()} disabled={deleteReportMutation.isPending}>
+              {deleteReportMutation.isPending ? 'Eliminando...' : 'Eliminar definitivamente'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[0.85rem]" style={{ color: '#cbd5e1' }}>
+          Se borrarán el informe, sus mediciones y sus fotos. Esta acción no se puede deshacer.
+        </p>
+      </Modal>
 
       {/* Estado y documentos */}
       <Card className="mb-4">

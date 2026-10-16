@@ -13,12 +13,14 @@ STAFF_ROLES = ("ADMIN", "COORDINATOR", "TECHNICIAN", "MANAGEMENT")
 
 class InstrumentPermission(BasePermission):
     """Dimed staff read the inventory (technicians pick instruments for their
-    reports); only admins/coordinators change it."""
+    reports); admins/coordinators change it and only admins delete."""
 
     def has_permission(self, request, view):
         role = getattr(request.user, "role", None)
         if request.method in SAFE_METHODS:
             return role in STAFF_ROLES
+        if request.method == "DELETE":
+            return role == "ADMIN" or request.user.is_superuser
         return role in ("ADMIN", "COORDINATOR")
 
 

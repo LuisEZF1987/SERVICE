@@ -116,6 +116,20 @@ export default function WorkOrdersPage() {
       ),
     },
     {
+      key: 'qc_reports_summary',
+      header: 'Informes QC',
+      render: (wo: WorkOrder) => {
+        const qc = wo.qc_reports_summary
+        if (!qc || qc.total === 0) return <span style={{ color: 'var(--muted)' }}>{'—'}</span>
+        const allSigned = qc.signed === qc.total
+        return (
+          <Badge variant={allSigned ? 'success' : 'warning'}>
+            {allSigned ? `${qc.total} firmado${qc.total > 1 ? 's' : ''}` : `${qc.signed}/${qc.total} firmados`}
+          </Badge>
+        )
+      },
+    },
+    {
       key: 'opened_at',
       header: 'Apertura',
       render: (wo: WorkOrder) => (

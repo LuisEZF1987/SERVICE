@@ -52,6 +52,11 @@ const navigation: NavItem[] = [
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,
   },
   {
+    name: 'Informes QC', href: '/qc-reports',
+    roles: ['ADMIN', 'COORDINATOR', 'TECHNICIAN', 'MANAGEMENT'],
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><path d="M8 15l2.5 2.5L16 12"/></svg>,
+  },
+  {
     name: 'Contratos', href: '/contracts', section: 'OPERACIONES',
     roles: ['ADMIN', 'COORDINATOR'],
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
@@ -68,7 +73,7 @@ const navigation: NavItem[] = [
   },
   {
     name: 'Instrumentos', href: '/instruments',
-    roles: ['ADMIN', 'COORDINATOR', 'TECHNICIAN'],
+    roles: ['ADMIN', 'COORDINATOR', 'TECHNICIAN', 'MANAGEMENT'],
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3"/><path d="M9 2h6"/><path d="M12 2v3"/></svg>,
   },
   {

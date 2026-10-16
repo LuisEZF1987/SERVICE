@@ -26,9 +26,10 @@ class UserSerializer(serializers.ModelSerializer):
             "privacy_policy_accepted_at",
             "client_organization",
             "is_active",
+            "is_superuser",
             "date_joined",
         ]
-        read_only_fields = ["id", "date_joined"]
+        read_only_fields = ["id", "date_joined", "is_superuser"]
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

@@ -376,8 +376,8 @@ export default function WorkOrderDetailPage() {
         }
       />
 
-      {/* Back button */}
-      <div className="mb-5">
+      {/* Back button + shortcut to the QC reports */}
+      <div className="mb-5 flex items-center gap-2 flex-wrap">
         <Button
           variant="ghost"
           size="sm"
@@ -390,6 +390,13 @@ export default function WorkOrderDetailPage() {
           }
         >
           Volver
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => document.getElementById('informes-qc')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          Informes de control de calidad
         </Button>
       </div>
 
@@ -602,10 +609,12 @@ export default function WorkOrderDetailPage() {
           </Card>
 
           {/* Evidencias del servicio */}
+          <div id="informes-qc" style={{ scrollMarginTop: '80px' }}>
+            <WorkOrderQCReportsSection workOrder={workOrder} editable={evidenceEditable} />
+          </div>
           <WorkOrderChecklistSection workOrder={workOrder} editable={evidenceEditable} />
           <WorkOrderSparePartsSection workOrder={workOrder} editable={evidenceEditable} />
           <WorkOrderPhotosSection workOrder={workOrder} editable={evidenceEditable} />
-          <WorkOrderQCReportsSection workOrder={workOrder} editable={evidenceEditable} />
         </div>
 
         {/* Column 3: Sidebar */}

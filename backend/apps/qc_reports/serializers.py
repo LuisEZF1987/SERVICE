@@ -22,12 +22,18 @@ class QCReportListSerializer(serializers.ModelSerializer):
     practice_display = serializers.CharField(source="get_practice_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     work_order_number = serializers.CharField(source="work_order.number", read_only=True)
+    equipment_code = serializers.CharField(source="work_order.equipment.internal_code", read_only=True)
+    client_name = serializers.CharField(source="work_order.client.name", read_only=True)
+    technician_name = serializers.CharField(
+        source="work_order.technician.get_full_name", read_only=True, default=""
+    )
 
     class Meta:
         model = QCReport
         fields = [
-            "id", "number", "work_order", "work_order_number", "practice",
-            "practice_display", "status", "status_display", "overall_result",
+            "id", "number", "work_order", "work_order_number", "equipment_code",
+            "client_name", "technician_name", "practice", "practice_display",
+            "status", "status_display", "overall_result",
             "issued_at", "signed_at", "created_at",
         ]
 
