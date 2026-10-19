@@ -91,7 +91,7 @@ PROTOCOLS = {
             ("Coincidencia campo luminoso / radiación — eje Y (Y1 + Y2)", "≤ 2% de la DFP"),
             ("Perpendicularidad del haz (IBA BATT)", "≤ 1.5°"),
             *_leak(LEAK_POINTS_TUBE),
-            ("Calidad de imagen con fantoma (cuña escalonada)", "Sin artefactos"),
+            ("Calidad de imagen con fantoma (IBA Primus A)", "Sin artefactos"),
             ("Resistencia de puesta a tierra", "< 4 Ω"),
             ("Voltaje neutro–tierra", "≤ 3 V"),
             ("Movimientos, frenos, enclavamientos y parada de emergencia", "Operativos"),
@@ -101,9 +101,9 @@ PROTOCOLS = {
         "photo_slots": [
             ("LIGHT_FIELD", "Prueba de coincidencia del haz luminoso con el haz de radiación (fantoma IBA Primus A)"),
             ("PERPENDICULARITY", "Prueba de perpendicularidad del haz (IBA BATT)"),
-            ("PHANTOM", "Fantoma de calidad de imagen (cuña escalonada)"),
+            ("PHANTOM", "Fantoma de calidad de imagen (IBA Primus A)"),
         ],
-        "radiation_conditions": "Técnica ____ kVp / ____ mAs; fantoma de dispersión de PMMA de 20 cm en el centro del campo, con el haz dirigido hacia la barrera evaluada.",
+        "radiation_conditions": "Técnica ____ kVp / ____ mAs; fantoma de dispersión: maniquí de agua de 20 cm en el centro del campo, con el haz dirigido hacia la barrera evaluada.",
     },
     "MAMMO": {
         "label": "Mamografía",
@@ -116,7 +116,7 @@ PROTOCOLS = {
             ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Sensor de mAs no invasivo", "Radcal 90M10"),
             ("Fantoma ACR de mamografía", ""),
-            ("Bloques de PMMA", ""),
+            ("Placas de PMMA (set AEC)", "IBA VD0203810"),
             ("Medidor de fuerza de compresión", "IBA VD0203480"),
             ("Láminas de aluminio para HVL (0.1 mm, 99.9%)", "IBA VD0403310"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
@@ -132,7 +132,7 @@ PROTOCOLS = {
             ("Capa hemirreductora a 28 kV (ver tabla HVL)", "≥ kVp/100 + 0.03 mm Al"),
             ("Dosis glandular media con fantoma ACR", "≤ 3.0 mGy"),
             ("Uniformidad del detector (campo plano)", "Sin artefactos"),
-            ("Control automático de exposición (bloques de PMMA de 2, 4 y 6 cm)", "Variación según fabricante"),
+            ("Control automático de exposición (placas de PMMA de 2, 4 y 6 cm)", "Variación según fabricante"),
             *_leak(LEAK_POINTS_TUBE),
             ("Parada de emergencia y liberación de la compresión", "Operativas"),
         ],
@@ -142,7 +142,7 @@ PROTOCOLS = {
             ("ACR_PHANTOM", "Imagen de la prueba de fantoma ACR"),
             ("UNIFORMITY", "Uniformidad del detector (campo plano)"),
         ],
-        "radiation_conditions": "Técnica clínica de mayor carga (____ kV / ____ mAs); fantoma de dispersión de PMMA (bloque de 4–6 cm) sobre el soporte de la mama.",
+        "radiation_conditions": "Técnica clínica de mayor carga (____ kV / ____ mAs); fantoma de dispersión de PMMA (set AEC IBA VD0203810, 4–6 cm) sobre el soporte de la mama.",
     },
     "CT": {
         "label": "Tomografía Computarizada (TC)",
@@ -199,7 +199,7 @@ PROTOCOLS = {
         "instruments": [
             ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Láminas de aluminio para HVL", "IBA VD0403320"),
-            ("Fantoma de PMMA 20 cm / atenuador Al-Cu", ""),
+            ("Maniquí de agua 20 cm / set AEC (PMMA y Al)", "IBA VD0203800"),
             ("Fantoma de fluoroscopia (pares de líneas)", "IBA Primus FG-18"),
             ("Pinza de corriente de fuga / multímetro", "Fluke 368 FC / Fluke 117"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
@@ -214,8 +214,8 @@ PROTOCOLS = {
             ("Reproducibilidad del rendimiento", "CV ≤ 5%"),
             ("Tasa de dosis en el receptor de imagen (FOV máximo, con rejilla)", "Según fabricante"),
             ("Dosis por imagen en modo de registro", "Según fabricante"),
-            ("Dosis a la entrada del fantoma PMMA 20 cm — fluoroscopia", "Según fabricante"),
-            ("Dosis a la entrada del fantoma PMMA 20 cm — registro", "Según fabricante"),
+            ("Dosis a la entrada del maniquí de agua de 20 cm — fluoroscopia", "Según fabricante"),
+            ("Dosis a la entrada del maniquí de agua de 20 cm — registro", "Según fabricante"),
             ("Resolución de pares de líneas — FOV 1: ____", "Según fabricante"),
             ("Resolución de pares de líneas — FOV 2: ____", "Según fabricante"),
             ("Tasa de exposición en fluoroscopia — modo normal", "≤ 87.6 mGy/min"),
@@ -227,7 +227,7 @@ PROTOCOLS = {
         "photo_slots": [
             ("LINE_PAIRS", "Fantoma IBA Primus FG-18 (pares de líneas)"),
         ],
-        "radiation_conditions": "Fluoroscopia continua en modo normal (____ kV / ____ mA), fantoma de dispersión de PMMA de 20 cm en el isocentro.",
+        "radiation_conditions": "Fluoroscopia continua en modo normal (____ kV / ____ mA), fantoma de dispersión: maniquí de agua de 20 cm en el isocentro.",
     },
     "CARM": {
         "label": "Arco en C con Intensificador de Imágenes o Detector",
@@ -260,7 +260,7 @@ PROTOCOLS = {
             ("LINE_PAIRS", "Fantoma IBA Primus FG-18 (pares de líneas)"),
             ("UNIFORMITY", "Uniformidad de imagen"),
         ],
-        "radiation_conditions": "Fluoroscopia continua en modo normal (____ kV / ____ mA), fantoma de dispersión de PMMA de 20 cm en el centro del campo.",
+        "radiation_conditions": "Fluoroscopia continua en modo normal (____ kV / ____ mA), fantoma de dispersión: maniquí de agua de 20 cm en el centro del campo.",
     },
     "FLUORO": {
         "label": "Fluoroscopio Fijo",
@@ -275,7 +275,7 @@ PROTOCOLS = {
             ("Set de colimación y alineación", "IBA LiRa VD0403865 (Primus A + BATT)"),
             ("Fantoma de fluoroscopia (pares de líneas)", "IBA Primus FG-18"),
             ("Fantoma de fluoroscopia (bajo contraste)", "IBA Primus FG-18"),
-            ("Bloques de PMMA / atenuadores", ""),
+            ("Placas de PMMA y aluminio (set AEC)", "IBA VD0203800"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
         ],
         "tests": [
@@ -302,7 +302,7 @@ PROTOCOLS = {
             ("LOW_CONTRAST", "Fantoma IBA Primus FG-18 (bajo contraste)"),
             ("LINE_PAIRS", "Fantoma IBA Primus FG-18 (pares de líneas)"),
         ],
-        "radiation_conditions": "Fluoroscopia continua en modo normal (____ kV / ____ mA), fantoma de dispersión de PMMA de 20 cm en el centro del campo.",
+        "radiation_conditions": "Fluoroscopia continua en modo normal (____ kV / ____ mA), fantoma de dispersión: maniquí de agua de 20 cm en el centro del campo.",
     },
 }
 
