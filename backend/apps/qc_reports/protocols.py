@@ -69,7 +69,7 @@ PROTOCOLS = {
         "equipment_extras": ["Generador (marca / modelo / S/N)", "Detector / receptor de imagen (marca / modelo / S/N)"],
         "tube_extras": ["Colimador (marca / modelo / S/N)"],
         "instruments": [
-            ("Multímetro dosimétrico", "RTI Piranha 657"),
+            ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Sensor de mAs no invasivo", "Radcal 90M10 + Accu-Gold+ AGDM+"),
             ("Kit de colimación y alineación", "Fluke Biomedical 07-661 / 07-662"),
             ("Láminas de aluminio tipo 1100", ""),
@@ -152,7 +152,7 @@ PROTOCOLS = {
         "equipment_extras": ["Gantry / detector (marca / modelo / S/N)", "Número de cortes", "Versión de software"],
         "tube_extras": [],
         "instruments": [
-            ("Multímetro dosimétrico", "RTI Piranha 657"),
+            ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Láminas de aluminio tipo 1100 (1.0 mm)", ""),
             ("Fantoma de agua / QA del fabricante (de la institución usuaria)", ""),
             ("Dial indicator / regla", "Mitutoyo 2046S"),
@@ -197,7 +197,7 @@ PROTOCOLS = {
         "equipment_extras": ["Detector de panel plano (marca / modelo / S/N)", "Generador (marca / modelo / S/N)"],
         "tube_extras": [],
         "instruments": [
-            ("Multímetro dosimétrico", "RTI Piranha 657"),
+            ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Láminas de aluminio tipo 1100", ""),
             ("Fantoma de PMMA 20 cm / atenuador Al-Cu", ""),
             ("Patrón de pares de líneas", ""),
@@ -237,7 +237,7 @@ PROTOCOLS = {
         "equipment_extras": ["Intensificador / detector (marca / modelo / S/N)"],
         "tube_extras": [],
         "instruments": [
-            ("Multímetro dosimétrico", "RTI Piranha 657"),
+            ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Sensor de mA no invasivo", "Radcal 90M10 + Accu-Gold+ AGDM+"),
             ("Patrón de pares de líneas", ""),
             ("Cronómetro", ""),
@@ -270,7 +270,7 @@ PROTOCOLS = {
         "equipment_extras": ["Intensificador / detector (marca / modelo / S/N)", "Generador (marca / modelo / S/N)"],
         "tube_extras": ["Colimador (marca / modelo / S/N)"],
         "instruments": [
-            ("Multímetro dosimétrico", "RTI Piranha 657"),
+            ("Digitalizador y multisensor", "Radcal Accu-Gold+ AGDM+ / AGMS-DM+"),
             ("Sensor de mA no invasivo", "Radcal 90M10 + Accu-Gold+ AGDM+"),
             ("Kit de colimación y alineación", "Fluke Biomedical 07-661 / 07-662"),
             ("Patrón de pares de líneas", ""),
