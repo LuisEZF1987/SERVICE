@@ -3,7 +3,8 @@ import type { AxiosError } from 'axios'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { qcReportsApi, QCReport, QCResult } from '../../api/qcReports'
+import { qcReportsApi, QCReport, QCResult, QCSection, QCTestRow } from '../../api/qcReports'
+import { evaluateSection, fmt, hvlInterpolated, toNumber } from './qcMethods'
 import { instrumentsApi, MeasuringInstrument } from '../../api/instruments'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
@@ -39,13 +40,6 @@ const STATUS_VARIANT: Record<string, 'secondary' | 'warning' | 'success'> = {
   ISSUED: 'warning',
   SIGNED: 'success',
 }
-
-const toNumber = (v: string) => {
-  const n = parseFloat(String(v ?? '').replace(',', '.'))
-  return Number.isFinite(n) ? n : null
-}
-const fmt = (n: number | null, digits = 3) =>
-  n === null ? '' : String(Number(n.toFixed(digits)))
 
 // ---------- small table controls ----------
 
@@ -139,6 +133,80 @@ const td: React.CSSProperties = {
 
 function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">{children}</div>
+}
+
+// ---------- result table of one test (manual Rev. 8) ----------
+
+function SectionCard({ number, section, onChange, locked }: {
+  number: string
+  section: QCSection
+  onChange: (s: QCSection) => void
+  locked: boolean
+}) {
+  const calc = evaluateSection(section)
+  const setRow = (i: number, patch: Partial<QCSection['rows'][number]>) =>
+    onChange({ ...section, rows: section.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) })
+  const setValue = (i: number, k: string, v: string) => setRow(i, { v: { ...section.rows[i].v, [k]: v } })
+  const editableLabel = (label?: string) => label === '' || (label ?? '').includes('____')
+  return (
+    <Card title={`${number}. ${section.title}`}>
+      <div className="text-[0.72rem] mb-2" style={{ color: 'var(--muted)' }}>
+        <strong style={{ color: '#cbd5e1' }}>Método y cálculo:</strong> {section.method}
+      </div>
+      {section.params?.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
+          {section.params.map((p, k) => (
+            <Input key={p.key} label={p.label} value={p.value} disabled={locked}
+              onChange={(e) => onChange({ ...section, params: section.params.map((x, j) => (j === k ? { ...x, value: e.target.value } : x)) })} />
+          ))}
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {section.label_header && <th style={{ ...th, textAlign: 'left' }}>{section.label_header}</th>}
+              {section.columns.map((c) => (
+                <th key={c.key} style={{ ...th, color: c.calc ? '#93c5fd' : th.color }}>{c.label}</th>
+              ))}
+              <th style={th}>Tolerancia</th><th style={th}>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {section.rows.map((r, i) => (
+              <tr key={i}>
+                {section.label_header && (
+                  <td style={{ ...td, minWidth: 200 }}>
+                    {editableLabel(r.label)
+                      ? <CellInput align="left" value={r.label ?? ''} onChange={(v) => setRow(i, { label: v })} disabled={locked} />
+                      : r.label}
+                  </td>
+                )}
+                {section.columns.map((c) => (
+                  c.calc
+                    ? <td key={c.key} style={{ ...td, textAlign: 'center', background: 'rgba(59,130,246,0.08)', color: '#93c5fd', fontWeight: 600 }}>{calc[i][c.key]}</td>
+                    : (
+                      <td key={c.key} style={{ ...td, minWidth: 70 }}>
+                        <CellInput value={r.v[c.key] ?? ''} onChange={(v) => setValue(i, c.key, v)} disabled={locked} />
+                      </td>
+                    )
+                ))}
+                <td style={{ ...td, textAlign: 'center', color: '#93c5fd', whiteSpace: 'nowrap' }}>
+                  {r.tolerance.includes('____')
+                    ? <CellInput value={r.tolerance} onChange={(v) => setRow(i, { tolerance: v })} disabled={locked} />
+                    : r.tolerance}
+                </td>
+                <td style={td}><ResultPicker value={r.result} onChange={(v) => setRow(i, { result: v })} disabled={locked} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="text-[0.68rem] mt-2" style={{ color: 'var(--muted)' }}>
+        Las columnas en azul se calculan solas a partir de las lecturas.
+      </div>
+    </Card>
+  )
 }
 
 // ---------- page ----------
@@ -237,13 +305,20 @@ export default function QCReportPage() {
   const inst = draft.institution ?? {}
   const setInst = (k: string, v: string) => update('institution', { ...inst, [k]: v })
 
+  // Reports created before manual Rev. 8 keep their flat list of tests.
+  const legacy = draft.tests.length > 0 && !('columns' in draft.tests[0])
+  const legacyTests = (legacy ? draft.tests : []) as QCTestRow[]
+  const sections = (legacy ? [] : draft.tests) as QCSection[]
   const setTest = (i: number, k: string, v: string) =>
-    update('tests', draft.tests.map((t, j) => (j === i ? { ...t, [k]: v } : t)))
+    update('tests', legacyTests.map((t, j) => (j === i ? { ...t, [k]: v } : t)))
+  const setSection = (i: number, s: QCSection) => update('tests', sections.map((x, j) => (j === i ? s : x)))
 
   const hvlRows = draft.hvl?.rows ?? []
   const d0 = hvlRows.length ? toNumber(hvlRows[0].dose) : null
+  const hvlCalc = hvlInterpolated(hvlRows)
 
   const radRows = draft.radiation_levels?.rows ?? []
+  const radLegacy = radRows.some((r) => r.measured !== undefined && r.r1 === undefined)
   const setRad = (i: number, k: string, v: string) =>
     update('radiation_levels', {
       ...draft.radiation_levels,
@@ -252,6 +327,91 @@ export default function QCReportPage() {
 
   const mammo = draft.mammo_score ?? {}
   const mammoRows = mammo.rows ?? []
+
+  const hvlCard = (title: string, method?: string) => (
+    <Card title={title}>
+      {method && (
+        <div className="text-[0.72rem] mb-2" style={{ color: 'var(--muted)' }}>
+          <strong style={{ color: '#cbd5e1' }}>Método y cálculo:</strong> {method}
+        </div>
+      )}
+            <table className="w-full mb-3" style={{ borderCollapse: 'collapse', maxWidth: 560 }}>
+              <thead>
+                <tr><th style={th}>Aluminio añadido (mm Al)</th><th style={th}>Dosis medida (µGy)</th><th style={th}>% respecto a D0</th></tr>
+              </thead>
+              <tbody>
+                {hvlRows.map((r, i) => {
+                  const dose = toNumber(r.dose)
+                  return (
+                    <tr key={i}>
+                      <td style={{ ...td, textAlign: 'center' }}>{r.thickness}{i === 0 ? ' (D0)' : ''}</td>
+                      <td style={td}>
+                        <CellInput value={r.dose} disabled={locked}
+                          onChange={(v) => update('hvl', { ...draft.hvl, rows: hvlRows.map((x, j) => (j === i ? { ...x, dose: v } : x)) })} />
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>{dose !== null && d0 ? fmt((dose / d0) * 100, 1) : ''}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 items-end">
+              <Input label={`HVL obtenido (mm Al)${hvlCalc !== null ? ` — calculado: ${fmt(hvlCalc, 2)}` : ''}`}
+                value={draft.hvl.hvl_value ?? ''} disabled={locked} placeholder={hvlCalc !== null ? fmt(hvlCalc, 2) : ''}
+                onChange={(e) => update('hvl', { ...draft.hvl, hvl_value: e.target.value })} />
+              <Input label="Valor mínimo exigido (mm Al)" value={draft.hvl.hvl_min ?? ''} disabled={locked}
+                onChange={(e) => update('hvl', { ...draft.hvl, hvl_min: e.target.value })} />
+              <div className="mb-4">
+                <ResultPicker value={draft.hvl.result} withNA={false} disabled={locked}
+                  onChange={(v) => update('hvl', { ...draft.hvl, result: v })} />
+              </div>
+            </div>
+    </Card>
+  )
+
+  const mammoCard = (title: string) => (
+    <Card title={title}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
+              <Select label="Fantoma utilizado" value={mammo.phantom_type ?? ''} disabled={locked}
+                options={[{ value: 'ACR (RMI 156 o equivalente)', label: 'ACR (RMI 156 o equivalente)' }, { value: 'ACR digital (DM)', label: 'ACR digital (DM)' }]}
+                onChange={(e) => update('mammo_score', { ...mammo, phantom_type: e.target.value })} />
+              <Input label="Marca / modelo / S/N del fantoma" value={mammo.phantom_id ?? ''} disabled={locked}
+                onChange={(e) => update('mammo_score', { ...mammo, phantom_id: e.target.value })} />
+              <Input label="Técnica (kV / mAs / ánodo-filtro)" value={mammo.technique ?? ''} disabled={locked}
+                onChange={(e) => update('mammo_score', { ...mammo, technique: e.target.value })} />
+            </div>
+            <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...th, textAlign: 'left' }}>Grupo de objetos</th><th style={th}>Puntaje obtenido</th>
+                  <th style={th}>Mínimo ACR (RMI 156)</th><th style={th}>Mínimo ACR digital</th><th style={th}>Resultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mammoRows.map((r, i) => {
+                  const set = (k: string, v: string) =>
+                    update('mammo_score', { ...mammo, rows: mammoRows.map((x, j) => (j === i ? { ...x, [k]: v } : x)) })
+                  return (
+                    <tr key={i}>
+                      <td style={td}>{r.object}</td>
+                      <td style={{ ...td, width: 110 }}><CellInput value={r.score} onChange={(v) => set('score', v)} disabled={locked} /></td>
+                      <td style={{ ...td, textAlign: 'center' }}>{r.min_rmi}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{r.min_dm}</td>
+                      <td style={td}><ResultPicker value={r.result} withNA={false} onChange={(v) => set('result', v)} disabled={locked} /></td>
+                    </tr>
+                  )
+                })}
+                <tr>
+                  <td style={{ ...td, fontWeight: 700 }} colSpan={4}>Resultado de la prueba de fantoma</td>
+                  <td style={td}>
+                    <ResultPicker value={mammo.overall} withNA={false} disabled={locked}
+                      onChange={(v) => update('mammo_score', { ...mammo, overall: v })} />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+    </Card>
+  )
 
   return (
     <div>
@@ -443,6 +603,24 @@ export default function QCReportPage() {
           </div>
         </Card>
 
+        {!legacy && (
+          <Card title="7. Resultados de las pruebas">
+            <div className="text-[0.74rem]" style={{ color: 'var(--muted)' }}>
+              Cada prueba tiene su tabla, como en el formato {draft.format_code} del manual: anote cada lectura que muestra
+              la pantalla del instrumento, en el momento de la medición. El promedio, la desviación y los demás valores
+              calculados se completan solos.
+            </div>
+          </Card>
+        )}
+
+        {sections.map((sec, i) => {
+          const number = `7.${i + 1}`
+          if (sec.kind === 'hvl') return <div key={sec.key}>{hvlCard(`${number}. ${sec.title}`, sec.method)}</div>
+          if (sec.kind === 'acr') return <div key={sec.key}>{mammoCard(`${number}. ${sec.title}`)}</div>
+          return <SectionCard key={sec.key} number={number} section={sec} locked={locked} onChange={(s) => setSection(i, s)} />
+        })}
+
+        {legacy && (
         <Card title="7. Resultados de las pruebas">
           <div className="text-[0.74rem] mb-2" style={{ color: 'var(--muted)' }}>
             Anote en cada casilla el valor que muestra la pantalla del instrumento, en el momento de la lectura.
@@ -456,7 +634,7 @@ export default function QCReportPage() {
                 </tr>
               </thead>
               <tbody>
-                {draft.tests.map((t, i) => (
+                {legacyTests.map((t, i) => (
                   <tr key={i}>
                     <td style={{ ...td, textAlign: 'center', color: '#64748b' }}>{i + 1}</td>
                     <td style={{ ...td, minWidth: 260 }}>{t.label}</td>
@@ -473,85 +651,10 @@ export default function QCReportPage() {
             </table>
           </div>
         </Card>
-
-        {hvlRows.length > 0 && (
-          <Card title={`7.1. Capa hemirreductora (HVL) a ${draft.hvl.kv}`}>
-            <table className="w-full mb-3" style={{ borderCollapse: 'collapse', maxWidth: 560 }}>
-              <thead>
-                <tr><th style={th}>Aluminio añadido (mm Al)</th><th style={th}>Dosis medida (µGy)</th><th style={th}>% respecto a D0</th></tr>
-              </thead>
-              <tbody>
-                {hvlRows.map((r, i) => {
-                  const dose = toNumber(r.dose)
-                  return (
-                    <tr key={i}>
-                      <td style={{ ...td, textAlign: 'center' }}>{r.thickness}{i === 0 ? ' (D0)' : ''}</td>
-                      <td style={td}>
-                        <CellInput value={r.dose} disabled={locked}
-                          onChange={(v) => update('hvl', { ...draft.hvl, rows: hvlRows.map((x, j) => (j === i ? { ...x, dose: v } : x)) })} />
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>{dose !== null && d0 ? fmt((dose / d0) * 100, 1) : ''}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 items-end">
-              <Input label="HVL obtenido (mm Al)" value={draft.hvl.hvl_value ?? ''} disabled={locked}
-                onChange={(e) => update('hvl', { ...draft.hvl, hvl_value: e.target.value })} />
-              <Input label="Valor mínimo exigido (mm Al)" value={draft.hvl.hvl_min ?? ''} disabled={locked}
-                onChange={(e) => update('hvl', { ...draft.hvl, hvl_min: e.target.value })} />
-              <div className="mb-4">
-                <ResultPicker value={draft.hvl.result} withNA={false} disabled={locked}
-                  onChange={(v) => update('hvl', { ...draft.hvl, result: v })} />
-              </div>
-            </div>
-          </Card>
         )}
 
-        {mammoRows.length > 0 && (
-          <Card title="7.2. Imagen de la prueba de fantoma y su puntaje (score)">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
-              <Select label="Fantoma utilizado" value={mammo.phantom_type ?? ''} disabled={locked}
-                options={[{ value: 'ACR (RMI 156 o equivalente)', label: 'ACR (RMI 156 o equivalente)' }, { value: 'ACR digital (DM)', label: 'ACR digital (DM)' }]}
-                onChange={(e) => update('mammo_score', { ...mammo, phantom_type: e.target.value })} />
-              <Input label="Marca / modelo / S/N del fantoma" value={mammo.phantom_id ?? ''} disabled={locked}
-                onChange={(e) => update('mammo_score', { ...mammo, phantom_id: e.target.value })} />
-              <Input label="Técnica (kV / mAs / ánodo-filtro)" value={mammo.technique ?? ''} disabled={locked}
-                onChange={(e) => update('mammo_score', { ...mammo, technique: e.target.value })} />
-            </div>
-            <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, textAlign: 'left' }}>Grupo de objetos</th><th style={th}>Puntaje obtenido</th>
-                  <th style={th}>Mínimo ACR (RMI 156)</th><th style={th}>Mínimo ACR digital</th><th style={th}>Resultado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mammoRows.map((r, i) => {
-                  const set = (k: string, v: string) =>
-                    update('mammo_score', { ...mammo, rows: mammoRows.map((x, j) => (j === i ? { ...x, [k]: v } : x)) })
-                  return (
-                    <tr key={i}>
-                      <td style={td}>{r.object}</td>
-                      <td style={{ ...td, width: 110 }}><CellInput value={r.score} onChange={(v) => set('score', v)} disabled={locked} /></td>
-                      <td style={{ ...td, textAlign: 'center' }}>{r.min_rmi}</td>
-                      <td style={{ ...td, textAlign: 'center' }}>{r.min_dm}</td>
-                      <td style={td}><ResultPicker value={r.result} withNA={false} onChange={(v) => set('result', v)} disabled={locked} /></td>
-                    </tr>
-                  )
-                })}
-                <tr>
-                  <td style={{ ...td, fontWeight: 700 }} colSpan={4}>Resultado de la prueba de fantoma</td>
-                  <td style={td}>
-                    <ResultPicker value={mammo.overall} withNA={false} disabled={locked}
-                      onChange={(v) => update('mammo_score', { ...mammo, overall: v })} />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Card>
-        )}
+        {legacy && hvlRows.length > 0 && hvlCard(`7.1. Capa hemirreductora (HVL) a ${draft.hvl.kv}`)}
+        {legacy && mammoRows.length > 0 && mammoCard('7.2. Imagen de la prueba de fantoma y su puntaje (score)')}
 
         <Card title="8. Niveles de radiación en consola de mando, puerta de acceso y áreas adyacentes">
           <div className="overflow-x-auto">
@@ -559,13 +662,18 @@ export default function QCReportPage() {
               <thead>
                 <tr>
                   <th style={th}>#</th><th style={{ ...th, textAlign: 'left' }}>Punto de medición</th><th style={th}>Tipo de área</th>
-                  <th style={th}>Fondo (µSv/h)</th><th style={th}>Medido (µSv/h)</th><th style={th}>Neto (µSv/h)</th>
+                  <th style={th}>Fondo (µSv/h)</th>
+                  {radLegacy
+                    ? <th style={th}>Medido (µSv/h)</th>
+                    : <><th style={th}>Lectura 1</th><th style={th}>Lectura 2</th><th style={th}>Lectura 3</th><th style={{ ...th, color: '#93c5fd' }}>Máximo (µSv/h)</th></>}
+                  <th style={{ ...th, color: '#93c5fd' }}>Neto (µSv/h)</th>
                   <th style={th}>Referencia (µSv/h)</th><th style={th}>Resultado</th>
                 </tr>
               </thead>
               <tbody>
                 {radRows.map((r, i) => {
-                  const measured = toNumber(r.measured)
+                  const reads = (['r1', 'r2', 'r3'] as const).map((k) => toNumber(r[k])).filter((x): x is number => x !== null)
+                  const measured = radLegacy ? toNumber(r.measured) : reads.length ? Math.max(...reads) : null
                   const net = measured === null ? null : Math.max(measured - (toNumber(r.background) ?? 0), 0)
                   const ref = toNumber(r.reference)
                   const over = net !== null && ref !== null && net > ref
@@ -579,7 +687,14 @@ export default function QCReportPage() {
                       </td>
                       <td style={{ ...td, width: 120 }}><CellInput value={r.area_type} onChange={(v) => setRad(i, 'area_type', v)} disabled={locked} /></td>
                       <td style={{ ...td, width: 90 }}><CellInput value={r.background} onChange={(v) => setRad(i, 'background', v)} disabled={locked} /></td>
-                      <td style={{ ...td, width: 90 }}><CellInput value={r.measured} onChange={(v) => setRad(i, 'measured', v)} disabled={locked} /></td>
+                      {radLegacy
+                        ? <td style={{ ...td, width: 90 }}><CellInput value={r.measured ?? ''} onChange={(v) => setRad(i, 'measured', v)} disabled={locked} /></td>
+                        : <>
+                          {(['r1', 'r2', 'r3'] as const).map((k) => (
+                            <td key={k} style={{ ...td, width: 80 }}><CellInput value={r[k] ?? ''} onChange={(v) => setRad(i, k, v)} disabled={locked} /></td>
+                          ))}
+                          <td style={{ ...td, textAlign: 'center', color: '#93c5fd' }}>{fmt(measured)}</td>
+                        </>}
                       <td style={{ ...td, textAlign: 'center', color: over ? '#f87171' : '#cbd5e1', fontWeight: over ? 700 : 400 }}>{fmt(net)}</td>
                       <td style={{ ...td, width: 90 }}><CellInput value={r.reference} onChange={(v) => setRad(i, 'reference', v)} disabled={locked} /></td>
                       <td style={td}><ResultPicker value={r.result} onChange={(v) => setRad(i, 'result', v)} disabled={locked} /></td>

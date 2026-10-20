@@ -7,7 +7,7 @@
     size: A4;
     margin: 1.4cm 1.3cm 1.7cm 1.3cm;
     @bottom-center {
-      content: "{{ report.number }} — Formato {{ protocol.format }} del Manual de Seguridad Radiológica — página " counter(page) " de " counter(pages);
+      content: "{{ report.number }} — Formato {{ protocol.format }} del Manual de Seguridad Radiológica (Rev. 8) — página " counter(page) " de " counter(pages);
       font-size: 7pt;
       color: #94a3b8;
     }
@@ -32,6 +32,10 @@
   .pass { color: #15803d; font-weight: 700; }
   .fail { color: #b91c1c; font-weight: 700; }
   .note { font-size: 7pt; color: #475569; margin-top: 3px; }
+  .sub { page-break-inside: avoid; }
+  .sub-title { font-size: 8pt; font-weight: 700; color: #003366; margin-bottom: 2px; page-break-after: avoid; }
+  .method { font-size: 6.8pt; color: #334155; margin-bottom: 3px; }
+  td.calc { background: #eef3f8; }
   .photos { display: flex; flex-wrap: wrap; justify-content: space-between; }
   .photo-box { width: 49%; border: 1px solid #cbd5e1; margin-bottom: 6px; page-break-inside: avoid; }
   .photo-box .cap { background: #eef3f8; font-weight: 700; font-size: 7.2pt; padding: 3px 5px; }
@@ -124,6 +128,49 @@
 
   <div class="section">
     <div class="section-title">7. Resultados de las pruebas (valores medidos frente a las tolerancias permitidas)</div>
+    {% if not legacy %}<div class="note" style="margin-bottom:4px">Cada tabla sigue la metodología del procedimiento del manual: número de lecturas, cada valor leído en el instrumento, valores calculados (columnas sombreadas) con la fórmula indicada, tolerancia y resultado. Los valores se registran en DIMED-SERVICIO en el momento de la lectura del instrumento. «N/A»: la prueba no aplica al equipo evaluado.</div>{% endif %}
+  </div>
+
+  {% for s in sections %}
+  <div class="section sub">
+    <div class="sub-title">{{ s.number }}. {{ s.title }}</div>
+    {% if s.method %}<div class="method"><strong>Método y cálculo:</strong> {{ s.method }}</div>{% endif %}
+    {% if s.kind == "hvl" %}
+    <table>
+      <tr><th>Espesor de aluminio añadido (mm Al)</th><th>Dosis medida D (µGy)</th><th>% respecto a D0 = D/D0 × 100</th></tr>
+      {% for r in s.hvl_rows %}<tr><td class="c">{{ r.thickness }}{% if forloop.first %} (sin lámina — D0){% endif %}</td><td class="c">{{ r.dose }}</td><td class="c calc">{{ r.pct }}</td></tr>{% endfor %}
+    </table>
+    <div class="note">HVL calculado por interpolación: <strong>{{ s.hvl.hvl_value|default:s.hvl_calc|default:"—" }} mm Al</strong> · Valor mínimo exigido: {{ s.hvl.hvl_min|default:"—" }} mm Al · Resultado: <strong>{{ s.hvl_result_label|default:"—" }}</strong></div>
+    {% elif s.kind == "acr" %}
+    <div class="note">Fantoma: {{ s.mammo.phantom_type|default:"—" }} · Marca / modelo / S/N: {{ s.mammo.phantom_id|default:"—" }} · Técnica: {{ s.mammo.technique|default:"—" }}</div>
+    <table>
+      <tr><th>Grupo de objetos</th><th>Puntaje obtenido</th><th>Mínimo — fantoma ACR (RMI 156)</th><th>Mínimo — fantoma ACR digital</th><th>Resultado</th></tr>
+      {% for r in s.mammo_rows %}
+      <tr><td>{{ r.object }}</td><td class="c">{{ r.score }}</td><td class="c">{{ r.min_rmi }}</td><td class="c">{{ r.min_dm }}</td>
+        <td class="c {% if r.result == 'PASS' %}pass{% elif r.result == 'FAIL' %}fail{% endif %}">{% if r.result == 'PASS' %}Cumple{% elif r.result == 'FAIL' %}No cumple{% endif %}</td></tr>
+      {% endfor %}
+      <tr><td><strong>Resultado de la prueba de fantoma</strong></td><td colspan="3"></td>
+        <td class="c {% if s.mammo.overall == 'PASS' %}pass{% elif s.mammo.overall == 'FAIL' %}fail{% endif %}">{% if s.mammo.overall == 'PASS' %}Cumple{% elif s.mammo.overall == 'FAIL' %}No cumple{% endif %}</td></tr>
+    </table>
+    <div class="note">El equipo cumple solo si los tres grupos de objetos alcanzan el puntaje mínimo del fantoma utilizado (criterios de la sección 7.4.2 del manual).</div>
+    {% else %}
+    {% if s.params %}<div class="note">{% for p in s.params %}{{ p.label }}: <strong>{{ p.value|default:"____" }}</strong>{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+    <table>
+      <tr>{% if s.label_header %}<th>{{ s.label_header }}</th>{% endif %}{% for c in s.columns %}<th>{{ c.label }}</th>{% endfor %}<th>Tolerancia</th><th>Resultado</th></tr>
+      {% for r in s.rows %}
+      <tr>
+        {% if s.label_header %}<td>{{ r.label }}</td>{% endif %}
+        {% for c in r.cells %}<td class="c{% if c.calc %} calc{% endif %}">{{ c.value }}</td>{% endfor %}
+        <td class="c">{{ r.tolerance }}</td>
+        <td class="c {% if r.result == 'PASS' %}pass{% elif r.result == 'FAIL' %}fail{% endif %}">{{ r.result_label }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% if legacy %}<div class="section">
     <table>
       <tr><th>#</th><th>Prueba / condición de medición</th><th>Tolerancia</th><th>Medición 1</th><th>Medición 2</th><th>Medición 3</th><th>Resultado</th></tr>
       {% for t in tests %}
@@ -134,10 +181,10 @@
       </tr>
       {% endfor %}
     </table>
-    <div class="note">Los valores se registran en DIMED-SERVICIO en el momento de la lectura del instrumento. «N/A»: la prueba no aplica al equipo evaluado.{% if protocol.notes %} {{ protocol.notes }}{% endif %}</div>
-  </div>
+    <div class="note">Los valores se registran en DIMED-SERVICIO en el momento de la lectura del instrumento. «N/A»: la prueba no aplica al equipo evaluado.</div>
+  </div>{% endif %}
 
-  {% if hvl_rows %}
+  {% if legacy and hvl_rows %}
   <div class="section">
     <div class="section-title">7.1. Capa hemirreductora (HVL) a {{ hvl.kv }}: dosis medida con cada espesor de aluminio añadido</div>
     <table>
@@ -148,7 +195,7 @@
   </div>
   {% endif %}
 
-  {% if mammo_rows %}
+  {% if legacy and mammo_rows %}
   <div class="section">
     <div class="section-title">7.2. Imagen de la prueba de fantoma y su puntaje (score)</div>
     <div class="note">Fantoma: {{ mammo.phantom_type|default:"—" }} · Marca / modelo / S/N: {{ mammo.phantom_id|default:"—" }} · Técnica: {{ mammo.technique|default:"—" }}</div>
@@ -168,16 +215,16 @@
   <div class="section">
     <div class="section-title">8. Niveles de radiación en la consola de mando, la puerta de acceso y las áreas adyacentes</div>
     <table>
-      <tr><th>#</th><th>Punto de medición</th><th>Tipo de área</th><th>Fondo (µSv/h)</th><th>Valor medido (µSv/h)</th><th>Valor neto (µSv/h)</th><th>Nivel de referencia (µSv/h)</th><th>Resultado</th></tr>
+      <tr><th>#</th><th>Punto de medición</th><th>Tipo de área</th><th>Fondo (µSv/h)</th>{% if legacy %}<th>Valor medido (µSv/h)</th>{% else %}<th>Lectura 1 (µSv/h)</th><th>Lectura 2 (µSv/h)</th><th>Lectura 3 (µSv/h)</th><th>Valor máximo (µSv/h)</th>{% endif %}<th>Valor neto (µSv/h)</th><th>Nivel de referencia (µSv/h)</th><th>Resultado</th></tr>
       {% for r in radiation_rows %}
       <tr>
         <td class="num">{{ forloop.counter }}</td><td>{{ r.point }}</td><td class="c">{{ r.area_type }}</td>
-        <td class="c">{{ r.background }}</td><td class="c">{{ r.measured }}</td><td class="c">{{ r.net }}</td><td class="c">{{ r.reference }}</td>
+        <td class="c">{{ r.background }}</td>{% if legacy %}<td class="c">{{ r.measured }}</td>{% else %}<td class="c">{{ r.r1 }}</td><td class="c">{{ r.r2 }}</td><td class="c">{{ r.r3 }}</td><td class="c calc">{{ r.max }}</td>{% endif %}<td class="c calc">{{ r.net }}</td><td class="c">{{ r.reference }}</td>
         <td class="c {% if r.result == 'PASS' %}pass{% elif r.result == 'FAIL' %}fail{% endif %}">{{ r.result_label }}</td>
       </tr>
       {% endfor %}
     </table>
-    <div class="note">Condiciones de medición: {{ radiation.conditions }} Instrumento: cámara de ionización Radcal 10X6-1800 + Accu-Gold+ AGDM+, S/N {{ radiation.instrument_serial|default:"—" }}. Tres mediciones por punto; se registra el valor máximo. Valor neto = medido − fondo.</div>
+    <div class="note">Condiciones de medición: {{ radiation.conditions }} Instrumento: cámara de ionización Radcal 10X6-1800 + Accu-Gold+ AGDM+, S/N {{ radiation.instrument_serial|default:"—" }}. Tres lecturas por punto; se registra el valor máximo. Valor neto = máximo − fondo.</div>
   </div>
 
   <div class="section">

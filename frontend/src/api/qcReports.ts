@@ -24,6 +24,7 @@ export interface QCInstrument {
   valid_until: string
 }
 
+/** Test row of reports created before manual Rev. 8 (flat list, three measurements). */
 export interface QCTestRow {
   label: string
   tolerance: string
@@ -31,6 +32,18 @@ export interface QCTestRow {
   m2: string
   m3: string
   result: QCResult
+}
+
+/** Result table of one test (manual Rev. 8): typed readings plus calculated columns. */
+export interface QCSection {
+  key: string
+  kind: 'exac' | 'repro' | 'lin' | 'rend' | 'mean' | 'hvl' | 'coinc' | 'unif' | 'aec' | 'dgm' | 'fuga' | 'simple' | 'acr'
+  title: string
+  method: string
+  label_header?: string
+  columns: { key: string; label: string; calc?: string; digits?: number }[]
+  params: { key: string; label: string; value: string }[]
+  rows: { label?: string; v: Record<string, string>; tolerance: string; result: QCResult }[]
 }
 
 export interface QCHvl {
@@ -53,7 +66,11 @@ export interface QCRadiationRow {
   point: string
   area_type: string
   background: string
-  measured: string
+  r1?: string
+  r2?: string
+  r3?: string
+  /** Single value of reports created before Rev. 8. */
+  measured?: string
   reference: string
   result: QCResult
 }
@@ -100,7 +117,8 @@ export interface QCReport extends QCReportSummary {
   equipment_data: QCDeviceData
   tube_data: QCDeviceData
   instruments: QCInstrument[]
-  tests: QCTestRow[]
+  /** Rev. 8 reports hold result sections; older ones a flat list of tests. */
+  tests: QCSection[] | QCTestRow[]
   hvl: QCHvl
   mammo_score: QCMammoScore
   radiation_levels: QCRadiationLevels

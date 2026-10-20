@@ -1,34 +1,18 @@
 """Quality-control protocols per radiological practice.
 
 Each protocol mirrors one of the report formats 9.1.1–9.1.6 of Dimed's
-Radiological Safety Manual (Rev. 7): the tests, their tolerances, the HVL
-aluminium steps, the photo slots and the default instruments. A new report
+Radiological Safety Manual (Rev. 8): the result tables of each test (see
+methods.py), the HVL aluminium steps, the photo slots and the default
+instruments. A new report
 starts as a copy of its protocol; from then on the report owns its rows, so
 later edits to this file never alter reports already issued.
 """
 
+from .methods import SECTIONS
+
 PASS = "PASS"
 FAIL = "FAIL"
 NOT_APPLICABLE = "NA"
-
-LEAK_POINTS_TUBE = [
-    "cara frontal (dirección del haz útil, colimador cerrado)",
-    "cara posterior",
-    "lateral derecho",
-    "lateral izquierdo",
-    "cara superior",
-    "cara inferior",
-    "unión coraza–colimador",
-]
-LEAK_POINTS_GANTRY = [
-    "frontal (entrada del gantry)",
-    "posterior (salida del gantry)",
-    "lateral derecho",
-    "lateral izquierdo",
-    "superior",
-    "inferior",
-    "superficie de la mesa a la altura del isocentro",
-]
 
 # Points of section 7.6 of the manual. Reference levels in µSv/h (net of background).
 RADIATION_POINTS = [
@@ -49,17 +33,6 @@ COMMON_PHOTO_SLOTS = [
     ("TUBE_PLATE", "Placa de identificación del tubo de rayos X"),
 ]
 
-LEAK_TOL = "≤ 1 mGy/h a 1 m"
-
-
-def _leak(points, gantry=False):
-    if gantry:
-        return [(f"Radiación de fuga del gantry — punto {i}: {p}, a 1 m", LEAK_TOL)
-                for i, p in enumerate(points, 1)]
-    return [(f"Radiación de fuga — punto {i}: {p}, a 1 m del foco", LEAK_TOL)
-            for i, p in enumerate(points, 1)]
-
-
 PROTOCOLS = {
     "RX": {
         "label": "Rayos X Convencional (fijo, móvil y portátil)",
@@ -75,27 +48,6 @@ PROTOCOLS = {
             ("Láminas de aluminio para HVL", "IBA VD0403320"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
             ("Multímetro", "Fluke 117"),
-        ],
-        "tests": [
-            ("Exactitud de kVp a 60 kVp (DFD = ____ cm)", "±5%"),
-            ("Exactitud de kVp a 80 kVp", "±5%"),
-            ("Exactitud de kVp a 100 kVp", "±5%"),
-            ("Exactitud de kVp a 120 kVp", "±5%"),
-            ("Reproducibilidad de kVp a 80 kVp", "CV ≤ 2%"),
-            ("Exactitud de mAs (sensor 90M10)", "±10%"),
-            ("Exactitud del tiempo de exposición", "±10%"),
-            ("Linealidad del rendimiento", "CL ≤ 0.1"),
-            ("Rendimiento del tubo a 1 m, 80 kVp (µGy/mAs)", "Según fabricante"),
-            ("Filtración total — HVL a 80 kVp (ver tabla HVL)", "≥ 2.5 mm Al"),
-            ("Coincidencia campo luminoso / radiación — eje X (X1 + X2)", "≤ 2% de la DFP"),
-            ("Coincidencia campo luminoso / radiación — eje Y (Y1 + Y2)", "≤ 2% de la DFP"),
-            ("Perpendicularidad del haz (IBA BATT)", "≤ 1.5°"),
-            *_leak(LEAK_POINTS_TUBE),
-            ("Calidad de imagen con fantoma (IBA Primus A)", "Sin artefactos"),
-            ("Resistencia de puesta a tierra", "< 4 Ω"),
-            ("Voltaje neutro–tierra", "≤ 3 V"),
-            ("Movimientos, frenos, enclavamientos y parada de emergencia", "Operativos"),
-            ("Señalización luminosa de emisión de radiación", "Operativa"),
         ],
         "hvl": ("80 kVp", ["0.0", "0.5", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5"], "2.5"),
         "photo_slots": [
@@ -121,21 +73,6 @@ PROTOCOLS = {
             ("Láminas de aluminio para HVL (0.1 mm, 99.9%)", "IBA VD0403310"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
         ],
-        "tests": [
-            ("Fuerza de compresión máxima", "111–200 N"),
-            ("Exactitud de kVp a 25 kV (DFD = ____ cm)", "±5%"),
-            ("Exactitud de kVp a 28 kV", "±5%"),
-            ("Exactitud de kVp a 30 kV", "±5%"),
-            ("Exactitud de mAs (sensor 90M10)", "±10%"),
-            ("Exactitud del tiempo de exposición", "±10%"),
-            ("Linealidad del rendimiento con mAs", "CL ≤ 0.1"),
-            ("Capa hemirreductora a 28 kV (ver tabla HVL)", "≥ kVp/100 + 0.03 mm Al"),
-            ("Dosis glandular media con fantoma ACR", "≤ 3.0 mGy"),
-            ("Uniformidad del detector (campo plano)", "Sin artefactos"),
-            ("Control automático de exposición (placas de PMMA de 2, 4 y 6 cm)", "Variación según fabricante"),
-            *_leak(LEAK_POINTS_TUBE),
-            ("Parada de emergencia y liberación de la compresión", "Operativas"),
-        ],
         "hvl": ("28 kV", ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6"], "0.31"),
         "mammo_score": True,
         "photo_slots": [
@@ -158,28 +95,6 @@ PROTOCOLS = {
             ("Dial indicator / regla", "Mitutoyo 2046S"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
         ],
-        "tests": [
-            ("Exactitud de kVp a 80 kV (tubo estacionario, isocentro)", "±5%"),
-            ("Exactitud de kVp a 100 kV", "±5%"),
-            ("Exactitud de kVp a 120 kV", "±5%"),
-            ("Exactitud de kVp a 140 kV", "±5%"),
-            ("Reproducibilidad de kVp a 120 kV", "CV ≤ 2%"),
-            ("Exactitud del tiempo de exposición / rotación", "±10%"),
-            ("Linealidad del rendimiento con mA/mAs (mA: ____ / ____ / ____)", "CL ≤ 0.1"),
-            ("Reproducibilidad del rendimiento", "CV ≤ 5%"),
-            ("Calidad del haz — HVL a 120 kV (ver tabla HVL)", "Según norma / fabricante"),
-            ("Número CT del agua", "0 ± 4 HU"),
-            ("Número CT del aire", "-1000 ± 5 HU"),
-            ("Uniformidad espacial (centro vs. periferia)", "±5 HU"),
-            ("Ruido de imagen (ROI central)", "Según fabricante"),
-            ("Resolución de alto contraste", "Según fabricante"),
-            ("Resolución de bajo contraste", "Según fabricante"),
-            ("Espesor de corte (cortes ≥ 2 mm)", "±1 mm"),
-            ("Exactitud de posicionamiento de la mesa", "±1 mm"),
-            ("Láseres de alineación", "Coinciden con el isocentro"),
-            *_leak(LEAK_POINTS_GANTRY, gantry=True),
-            ("Movimientos de la mesa y parada de emergencia", "Operativos"),
-        ],
         "hvl": ("120 kV", ["0.0", "1.0", "2.0", "3.0", "4.0", "5.0", "6.0"], ""),
         "photo_slots": [
             ("WATER_PHANTOM", "Fantoma de agua (número CT, uniformidad y ruido)"),
@@ -187,7 +102,6 @@ PROTOCOLS = {
             ("PHANTOM_LABEL", "Fantoma utilizado (marca, modelo y S/N)"),
         ],
         "radiation_conditions": "Protocolo de abdomen de mayor carga (____ kV / ____ mAs, colimación ____ mm), con el fantoma de agua del fabricante centrado en el gantry.",
-        "notes": "DIMED HEALTHCARE S.A. no realiza la medición del CTDI.",
     },
     "ANGIO": {
         "label": "Angiografía / Radiología Intervencionista",
@@ -203,25 +117,6 @@ PROTOCOLS = {
             ("Fantoma de fluoroscopia (pares de líneas)", "IBA Primus FG-18"),
             ("Pinza de corriente de fuga / multímetro", "Fluke 368 FC / Fluke 117"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
-        ],
-        "tests": [
-            ("Exactitud de kVp a 60 kVp (DFD = ____ cm)", "±5%"),
-            ("Exactitud de kVp a 80 kVp", "±5%"),
-            ("Exactitud de kVp a 100 kVp", "±5%"),
-            ("Exactitud de kVp a 120 kVp", "±5%"),
-            ("Filtración total — HVL a 80 kVp (ver tabla HVL)", "≥ 2.5 mm Al"),
-            ("Linealidad del rendimiento", "CL ≤ 0.1"),
-            ("Reproducibilidad del rendimiento", "CV ≤ 5%"),
-            ("Tasa de dosis en el receptor de imagen (FOV máximo, con rejilla)", "Según fabricante"),
-            ("Dosis por imagen en modo de registro", "Según fabricante"),
-            ("Dosis a la entrada del maniquí de agua de 20 cm — fluoroscopia", "Según fabricante"),
-            ("Dosis a la entrada del maniquí de agua de 20 cm — registro", "Según fabricante"),
-            ("Resolución de pares de líneas — FOV 1: ____", "Según fabricante"),
-            ("Resolución de pares de líneas — FOV 2: ____", "Según fabricante"),
-            ("Tasa de exposición en fluoroscopia — modo normal", "≤ 87.6 mGy/min"),
-            ("Tasa de exposición en fluoroscopia — alta tasa (con aviso al operador)", "≤ 175 mGy/min"),
-            ("Resistencia de tierra de protección y corrientes de fuga", "Según norma"),
-            ("Anticolisión, parada de emergencia, retroceso de emergencia y enclavamientos", "Operativos"),
         ],
         "hvl": ("80 kVp", ["0.0", "0.5", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0"], "2.5"),
         "photo_slots": [
@@ -242,18 +137,6 @@ PROTOCOLS = {
             ("Fantoma de fluoroscopia (pares de líneas)", "IBA Primus FG-18"),
             ("Cronómetro", ""),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
-        ],
-        "tests": [
-            ("Tasa de dosis en fluoroscopia — modo normal", "≤ 50 mGy/min"),
-            ("Exactitud de kVp (DFD = ____ cm)", "±5%"),
-            ("Exactitud de mA (sensor 90M10)", "±10%"),
-            ("Exactitud del tiempo de exposición", "±10%"),
-            ("Temporizador de fluoroscopia", "Alarma a los 5 min"),
-            ("Resolución espacial (lp/mm)", "Según fabricante"),
-            ("Uniformidad de imagen", "Sin artefactos"),
-            *_leak(LEAK_POINTS_TUBE),
-            ("Frenos de seguridad en todos los ejes", "Operativos"),
-            ("Parada de emergencia", "Operativa"),
         ],
         "hvl": None,
         "photo_slots": [
@@ -277,23 +160,6 @@ PROTOCOLS = {
             ("Fantoma de fluoroscopia (bajo contraste)", "IBA Primus FG-18"),
             ("Placas de PMMA y aluminio (set AEC)", "IBA VD0203800"),
             ("Cámara de ionización (fuga y áreas)", "Radcal 10X6-1800"),
-        ],
-        "tests": [
-            ("Tasa de dosis en fluoroscopia — modo normal", "≤ 50 mGy/min"),
-            ("Tasa de dosis en fluoroscopia — alta tasa", "≤ 87.6 mGy/min"),
-            ("Exactitud de kVp (DFD = ____ cm)", "±5%"),
-            ("Exactitud de mA (sensor 90M10)", "±10%"),
-            ("Exactitud del tiempo de exposición", "±10%"),
-            ("Control automático de exposición (CAE) con distintos espesores", "Brillo / dosis estable"),
-            ("Temporizador de fluoroscopia", "Alarma a los 5 min"),
-            ("Resolución espacial (lp/mm)", "Según fabricante"),
-            ("Resolución de bajo contraste", "Según fabricante"),
-            ("Coincidencia campo luminoso / radiación — eje X (X1 + X2)", "≤ 2% de la DFP"),
-            ("Coincidencia campo luminoso / radiación — eje Y (Y1 + Y2)", "≤ 2% de la DFP"),
-            ("Perpendicularidad del haz (IBA BATT)", "≤ 1.5°"),
-            *_leak(LEAK_POINTS_TUBE),
-            ("Frenos, movimientos y parada de emergencia", "Operativos"),
-            ("Señalización de alta tasa al operador", "Operativa"),
         ],
         "hvl": None,
         "photo_slots": [
@@ -397,17 +263,15 @@ def initial_report_data(work_order, practice):
             {"name": name, "model": model, "serial": "", "certificate": "", "valid_until": ""}
             for name, model in protocol["instruments"]
         ],
-        "tests": [
-            {"label": label, "tolerance": tol, "m1": "", "m2": "", "m3": "", "result": ""}
-            for label, tol in protocol["tests"]
-        ],
+        # Section 7: one result table per test, in the order of the manual's format.
+        "tests": SECTIONS[practice](),
         "hvl": hvl,
         "mammo_score": mammo_score,
         "radiation_levels": {
             "conditions": protocol["radiation_conditions"],
             "instrument_serial": "",
             "rows": [
-                {"point": point, "area_type": area, "background": "", "measured": "",
+                {"point": point, "area_type": area, "background": "", "r1": "", "r2": "", "r3": "",
                  "reference": ref, "result": ""}
                 for point, area, ref in RADIATION_POINTS
             ],

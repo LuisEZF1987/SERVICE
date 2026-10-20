@@ -1,3 +1,4 @@
+import math
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -8,6 +9,7 @@ from apps.accounts.models import User
 from apps.work_orders.models import WorkOrder
 from apps.work_orders.tests import make_fixtures
 
+from .methods import SECTIONS, evaluate_section, hvl_interpolated
 from .models import QCReport
 from .protocols import PROTOCOLS, initial_report_data
 from .services.pdf import hvl_rows, radiation_rows, render_qc_report_html
@@ -24,16 +26,17 @@ class ProtocolTests(TestCase):
         )
 
     def test_every_practice_builds_initial_data(self):
-        for practice, protocol in PROTOCOLS.items():
+        for practice in PROTOCOLS:
             data = initial_report_data(self.ot, practice)
-            self.assertEqual(len(data["tests"]), len(protocol["tests"]), practice)
+            self.assertEqual(len(data["tests"]), len(SECTIONS[practice]()), practice)
+            self.assertTrue(all("columns" in s for s in data["tests"]), practice)
             self.assertEqual(data["equipment_data"]["serial"], self.equipment.serial_number)
             self.assertEqual(data["institution"]["ruc"], self.client_org.ruc)
             self.assertEqual(len(data["radiation_levels"]["rows"]), 10)
 
     def test_ct_report_has_no_ctdi_test(self):
-        labels = " ".join(t for t, _ in PROTOCOLS["CT"]["tests"])
-        self.assertNotIn("CTDI", labels)
+        text = str(SECTIONS["CT"]())
+        self.assertNotIn("CTDI", text)
 
     def test_only_mammography_has_phantom_score(self):
         for practice in PROTOCOLS:
@@ -49,6 +52,47 @@ class ProtocolTests(TestCase):
         rows = radiation_rows({"rows": [{"measured": "0.45", "background": "0.15"}, {"measured": ""}]})
         self.assertEqual(rows[0]["net"], "0.3")
         self.assertEqual(rows[1]["net"], "")
+
+    def test_radiation_uses_maximum_of_three_readings(self):
+        rows = radiation_rows({"rows": [{"r1": "0.30", "r2": "0,45", "r3": "0.40", "background": "0.15"}]})
+        self.assertEqual((rows[0]["max"], rows[0]["net"]), ("0.45", "0.3"))
+
+    def test_exactitude_mean_and_deviation(self):
+        section = SECTIONS["RX"]()[0]
+        section["rows"][0]["v"].update({"r1": "61", "r2": "62", "r3": "63"})
+        cells = [c["value"] for c in evaluate_section(section)[0]["cells"]]
+        self.assertEqual(cells, ["60", "61", "62", "63", "62", "3.3"])
+
+    def test_reproducibility_cv(self):
+        section = SECTIONS["RX"]()[1]
+        section["rows"][0]["v"].update({f"r{i}": v for i, v in enumerate(["80", "81", "79", "80", "80"], 1)})
+        cells = {c["key"]: cell["value"] for c, cell in zip(section["columns"], evaluate_section(section)[0]["cells"], strict=True)}
+        self.assertEqual((cells["avg"], cells["sd"], cells["cv"]), ("80", "0.707", "0.88"))
+
+    def test_linearity_coefficient_between_consecutive_rows(self):
+        section = SECTIONS["RX"]()[4]
+        for row, dose in zip(section["rows"], ("100", "210", "400"), strict=True):
+            row["v"].update({"d1": dose, "d2": dose, "d3": dose})
+        rows = evaluate_section(section)
+        cl = [r["cells"][-1]["value"] for r in rows]
+        self.assertEqual(cl, ["0.024", "0.024", ""])
+
+    def test_leakage_rate_normalised_to_continuous_load(self):
+        section = next(s for s in SECTIONS["RX"]() if s["kind"] == "fuga")
+        section["params"] = [{"key": "q", "value": "100"}, {"key": "i", "value": "3"}]
+        section["rows"][0]["v"].update({"d1": "0.002", "d2": "0.002", "d3": "0.002"})
+        self.assertEqual(evaluate_section(section)[0]["cells"][-1]["value"], "0.216")
+
+    def test_aec_deviation_against_4_cm(self):
+        section = next(s for s in SECTIONS["MAMMO"]() if s["kind"] == "aec")
+        for row, val in zip(section["rows"], ("440", "400", "380"), strict=True):
+            row["v"]["val"] = val
+        devs = [r["cells"][-1]["value"] for r in evaluate_section(section)]
+        self.assertEqual(devs, ["10", "", "-5"])
+
+    def test_hvl_log_interpolation(self):
+        rows = [{"thickness": "0", "dose": "100"}, {"thickness": "2.5", "dose": "55"}, {"thickness": "3.0", "dose": "45"}]
+        self.assertAlmostEqual(hvl_interpolated(rows), 2.5 + 0.5 * math.log(1.1) / math.log(55 / 45), 6)
 
 
 @override_settings(MEDIA_ROOT="/tmp/test-media-qc")
@@ -77,7 +121,7 @@ class QCReportApiTests(TestCase):
         self.assertTrue(data["number"].startswith("DIMED-IM-"))
         self.assertEqual(data["format_code"], "9.1.2")
         self.assertEqual(data["service_type"], "PREVENTIVE")
-        self.assertEqual(len(data["tests"]), len(PROTOCOLS["MAMMO"]["tests"]))
+        self.assertEqual(len(data["tests"]), len(SECTIONS["MAMMO"]()))
         self.assertEqual(data["status"], "DRAFT")
 
     def test_other_technician_cannot_create_or_see(self):
@@ -90,10 +134,11 @@ class QCReportApiTests(TestCase):
     def test_update_measurements(self):
         data = self._create()
         tests = data["tests"]
-        tests[0].update({"m1": "60.8", "m2": "61.0", "m3": "60.9", "result": "PASS"})
+        tests[0]["rows"][0]["v"].update({"r1": "60.8", "r2": "61.0", "r3": "60.9"})
+        tests[0]["rows"][0]["result"] = "PASS"
         res = self.api.patch(f"/api/v1/qc-reports/{data['id']}/", {"tests": tests}, format="json")
         self.assertEqual(res.status_code, 200, res.data)
-        self.assertEqual(QCReport.objects.get(pk=data["id"]).tests[0]["m1"], "60.8")
+        self.assertEqual(QCReport.objects.get(pk=data["id"]).tests[0]["rows"][0]["v"]["r1"], "60.8")
 
     def test_rejects_malformed_json_sections(self):
         data = self._create()
@@ -155,6 +200,18 @@ class QCReportApiTests(TestCase):
             html = render_qc_report_html(report)
             self.assertIn(report.number, html)
             self.assertNotIn("Representante del Cliente", html)
+            self.assertIn("Método y cálculo", html)
+            self.assertNotIn("Medición 1", html)
+
+    def test_report_created_before_rev8_keeps_its_layout(self):
+        report = QCReport.objects.create(
+            work_order=self.ot, practice="RX",
+            tests=[{"label": "Exactitud de kVp a 60 kVp", "tolerance": "±5%", "m1": "60.4", "m2": "", "m3": "", "result": "PASS"}],
+            radiation_levels={"rows": [{"point": "Consola", "measured": "0.2", "background": "0.1", "reference": "10"}]},
+        )
+        html = render_qc_report_html(report)
+        self.assertIn("Medición 1", html)
+        self.assertIn("60.4", html)
 
 
 class QCReportDeleteAndDashboardTests(TestCase):
