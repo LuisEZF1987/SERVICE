@@ -228,32 +228,26 @@ corr = upsert_ot(
         arrival_at=dt(2026, 9, 4, 10, 0),
         started_at=dt(2026, 9, 4, 10, 0),
         finished_at=dt(2026, 9, 4, 14, 35),
-        reported_problem=(
-            "El equipo no encendía y presentaba problemas de calidad de imagen "
-            "(imagen con ruido y falta de uniformidad)."
-        ),
+        reported_problem="El equipo no encendía.",
         diagnosis=(
-            "En la revisión del sistema de alimentación se identificó falla en el circuito de "
-            "encendido (fusible de línea abierto y contacto defectuoso en el interruptor principal), "
-            "lo que impedía el arranque del equipo. Una vez restablecido el encendido, se observó "
-            "degradación de la calidad de imagen (ruido y falta de uniformidad) por descalibración "
-            "del detector de panel plano."
+            "Se descartó falla de fusibles y de la fuente de alimentación. Al inspeccionar el "
+            "interior se encontró que, por el giro excesivo y repetido del arco en C durante el "
+            "uso, un cable interno se desprendió de sus conexiones y quedó enrollado y tensionado, "
+            "interrumpiendo la alimentación del sistema (se aprecia el cable enrollado en el "
+            "registro fotográfico)."
         ),
         work_performed=(
-            "• Diagnóstico del sistema de alimentación y del circuito de encendido.\n"
-            "• Reemplazo del fusible de línea y del interruptor principal defectuoso.\n"
-            "• Verificación de voltajes de la fuente; encendido y autodiagnóstico sin errores.\n"
-            "• Recalibración completa del detector de panel plano (ganancia, offset y corrección de "
-            "píxeles defectuosos).\n"
-            "• Limpieza del detector y del colimador.\n"
-            "• Ajuste de parámetros del generador (kVp / mA) dentro de tolerancia.\n"
-            "• Pruebas de calidad de imagen en fluoroscopía y modo SPOT: imagen nítida, uniforme y "
-            "sin artefactos.\n"
+            "• Inspección interna del arco en C y del recorrido del cableado.\n"
+            "• Se identificó el cable interno desprendido y enrollado por el giro excesivo del arco.\n"
+            "• Se desarmó el cableado afectado y se restablecieron las conexiones internas.\n"
+            "• Se reorganizó y aseguró el cable para evitar tensión con el movimiento del arco.\n"
+            "• Encendido del equipo y autodiagnóstico sin errores.\n"
+            "• Prueba de calidad de imagen en fluoroscopía: nítida y sin artefactos.\n"
             "• Prueba funcional integral: equipo operativo."
         ),
         follow_up_notes=(
-            "Se recomienda alimentar el equipo desde una toma con protección (estabilizador/UPS) "
-            "para evitar daños por variaciones de tensión.\n"
+            "Evitar el giro excesivo y repetido del arco en C más allá de su rango de trabajo, "
+            "para no tensionar ni desprender el cableado interno.\n"
             "Mantener el mantenimiento preventivo con frecuencia semestral."
         ),
         travel_cost=Decimal("0.00"),
