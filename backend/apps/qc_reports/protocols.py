@@ -250,14 +250,14 @@ def initial_report_data(work_order, practice):
             "model": equipment.model_name,
             "serial": equipment.serial_number,
             "year": str(equipment.year_of_manufacture or ""),
-            "extras": [{"label": label, "value": ""} for label in protocol["equipment_extras"]],
+            "extras": [{"label": label, "value": ""} for label in protocol.get("equipment_extras", [])],
         },
         "tube_data": {
             "brand": "",
             "model": "",
             "serial": "",
             "year": "",
-            "extras": [{"label": label, "value": ""} for label in protocol["tube_extras"]],
+            "extras": [{"label": label, "value": ""} for label in protocol.get("tube_extras", [])],
         },
         "instruments": [
             {"name": name, "model": model, "serial": "", "certificate": "", "valid_until": ""}
