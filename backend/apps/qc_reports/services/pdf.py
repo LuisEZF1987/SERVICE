@@ -10,6 +10,7 @@ from django.utils import timezone
 from apps.work_orders.services.pdf import photo_thumbnail_data_uri
 from common.branding import company_logo_data_uri
 
+from ..methods import evaluate_section, fmt, hvl_interpolated, to_number
 from ..protocols import FAIL, NOT_APPLICABLE, PASS, PROTOCOLS, photo_slots
 
 RESULT_LABELS = {PASS: "Cumple", FAIL: "No cumple", NOT_APPLICABLE: "N/A"}
@@ -23,42 +24,59 @@ COMPANY = {
 }
 
 
-def _number(value):
-    """Parse a technician-typed number ('0,35', ' 12.4 ') or return None."""
-    if value in (None, ""):
-        return None
-    try:
-        return float(str(value).strip().replace(",", "."))
-    except ValueError:
-        return None
-
-
-def _fmt(value, digits=2):
-    return f"{value:.{digits}f}".rstrip("0").rstrip(".") if value is not None else ""
-
-
 def hvl_rows(hvl):
     """HVL table rows with the % of the unfiltered dose (D0) filled in."""
     rows = hvl.get("rows", []) if hvl else []
-    d0 = _number(rows[0].get("dose")) if rows else None
+    d0 = to_number(rows[0].get("dose")) if rows else None
     out = []
     for row in rows:
-        dose = _number(row.get("dose"))
-        pct = _fmt(dose / d0 * 100, 1) if (dose is not None and d0) else ""
+        dose = to_number(row.get("dose"))
+        pct = fmt(dose / d0 * 100, 1) if (dose is not None and d0) else ""
         out.append({"thickness": row.get("thickness", ""), "dose": row.get("dose", ""), "pct": pct})
     return out
 
 
 def radiation_rows(levels):
-    """Radiation-level rows with the net value (measured − background)."""
+    """Radiation-level rows with the maximum of the 3 readings and the net value (maximum − background).
+
+    Reports created before Rev. 8 carry a single "measured" value instead of r1–r3.
+    """
     out = []
     for row in (levels or {}).get("rows", []):
-        measured = _number(row.get("measured"))
-        background = _number(row.get("background"))
+        reads = [to_number(row.get(k)) for k in ("r1", "r2", "r3")]
+        reads = [x for x in reads if x is not None]
+        measured = max(reads) if reads else to_number(row.get("measured"))
+        background = to_number(row.get("background"))
         net = None
         if measured is not None:
             net = max(measured - (background or 0), 0)
-        out.append({**row, "net": _fmt(net, 3), "result_label": RESULT_LABELS.get(row.get("result"), "")})
+        out.append({**row, "max": fmt(measured, 3), "net": fmt(net, 3),
+                    "result_label": RESULT_LABELS.get(row.get("result"), "")})
+    return out
+
+
+def is_legacy(tests):
+    """Reports created before Rev. 8 store a flat list of tests with three measurements."""
+    return bool(tests) and "columns" not in tests[0]
+
+
+def result_sections(report):
+    """Section 7 of the report: one numbered table per test, calculated values filled in."""
+    out = []
+    for i, section in enumerate(report.tests, 1):
+        s = {**section, "number": f"7.{i}"}
+        if section["kind"] == "hvl":
+            hvl = report.hvl or {}
+            calc = hvl_interpolated(hvl.get("rows"))
+            s.update(hvl=hvl, hvl_rows=hvl_rows(hvl), hvl_calc=fmt(calc, 2),
+                     hvl_result_label=RESULT_LABELS.get(hvl.get("result"), ""))
+        elif section["kind"] == "acr":
+            mammo = report.mammo_score or {}
+            s.update(mammo=mammo, mammo_rows=mammo.get("rows", []))
+        else:
+            s["rows"] = [{**r, "result_label": RESULT_LABELS.get(r.get("result"), "")}
+                         for r in evaluate_section(section)]
+        out.append(s)
     return out
 
 
@@ -71,7 +89,8 @@ def build_qc_report_context(report):
             images.setdefault(photo.slot, []).append({"uri": uri, "caption": photo.caption})
     slots = [{"slot": s, "label": label, "images": images.get(s, [])} for s, label in photo_slots(report.practice)]
 
-    tests = [{**t, "result_label": RESULT_LABELS.get(t.get("result"), "")} for t in report.tests]
+    legacy = is_legacy(report.tests)
+    tests = [{**t, "result_label": RESULT_LABELS.get(t.get("result"), "")} for t in report.tests] if legacy else []
     mammo = report.mammo_score or {}
     mammo_rows = [{**r, "result_label": RESULT_LABELS.get(r.get("result"), "")} for r in mammo.get("rows", [])]
 
@@ -83,7 +102,9 @@ def build_qc_report_context(report):
         "protocol": protocol,
         "work_order": work_order,
         "technician": work_order.technician,
+        "legacy": legacy,
         "tests": tests,
+        "sections": [] if legacy else result_sections(report),
         "hvl": report.hvl,
         "hvl_rows": hvl_rows(report.hvl),
         "hvl_result_label": RESULT_LABELS.get((report.hvl or {}).get("result"), ""),
