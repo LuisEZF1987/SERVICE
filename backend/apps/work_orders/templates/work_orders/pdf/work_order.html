@@ -62,14 +62,18 @@
   td { font-size: 8.5pt; padding: 4px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
   .ok { color: #15803d; font-weight: 700; }
   .fail { color: #b91c1c; font-weight: 700; }
-  .photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-  .photo-item { width: 48%; margin-bottom: 8px; }
-  .photo-item img { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; }
+  .photo-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .photo-item { width: 48.5%; margin-bottom: 4px; }
+  .photo-item img { width: 100%; height: 185px; object-fit: cover; display: block;
+                    border: 1px solid #cbd5e1; border-radius: 4px; background: #f1f5f9; }
   .photo-caption { font-size: 7.5pt; color: #475569; margin-top: 2px; }
-  .signatures { display: flex; justify-content: space-between; margin-top: 26px; }
-  .sign-box { width: 46%; text-align: center; }
-  .sign-img { height: 55px; object-fit: contain; margin-bottom: 2px; }
-  .sign-line { border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px; }
+  .signatures { display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; }
+  .sign-box { width: 48%; text-align: center; }
+  .sign-space { height: 105px; border: 1px dashed #cbd5e1; border-radius: 4px;
+                display: flex; align-items: center; justify-content: center;
+                color: #cbd5e1; font-size: 7pt; }
+  .sign-img { max-height: 100px; max-width: 96%; object-fit: contain; }
+  .sign-line { border-top: 1px solid #334155; padding-top: 4px; margin-top: 3px; }
   .sign-name { font-weight: 700; font-size: 9pt; }
   .sign-role { font-size: 7.5pt; color: #64748b; }
   .muted { color: #94a3b8; }
@@ -211,14 +215,14 @@
 
   <div class="signatures">
     <div class="sign-box">
-      {% if technician_signature_uri %}<img class="sign-img" src="{{ technician_signature_uri }}" alt="Firma técnico">{% endif %}
+      <div class="sign-space">{% if technician_signature_uri %}<img class="sign-img" src="{{ technician_signature_uri }}" alt="Firma técnico">{% else %}Espacio para la firma electrónica (FirmaEC){% endif %}</div>
       <div class="sign-line">
         <div class="sign-name">{{ technician.get_full_name|default:"—" }}</div>
         <div class="sign-role">Técnico Dimed Healthcare{% if ot.technician_signed_at %} · {{ ot.technician_signed_at|date:"d/m/Y H:i" }}{% endif %}</div>
       </div>
     </div>
     <div class="sign-box">
-      {% if client_signature_uri %}<img class="sign-img" src="{{ client_signature_uri }}" alt="Firma cliente">{% endif %}
+      <div class="sign-space">{% if client_signature_uri %}<img class="sign-img" src="{{ client_signature_uri }}" alt="Firma cliente">{% else %}Espacio para la firma del cliente{% endif %}</div>
       <div class="sign-line">
         <div class="sign-name">{{ ot.client_signer_name|default:"Pendiente de firma" }}</div>
         <div class="sign-role">
