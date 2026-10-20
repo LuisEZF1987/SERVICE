@@ -54,14 +54,14 @@ inst = set_ot_photos("OT-2026-0007", [
     ("inst_despues_2.jpg", A, "Prueba de imagen de verificación"),
 ])
 prev = set_ot_photos("OT-2026-0008", [
-    ("prev_durante.jpg", D, "Revisión y limpieza del detector de panel plano"),
-    ("prev_despues.jpg", A, "Detector verificado y equipo operativo"),
+    ("prev_despues.jpg", D, "Revisión y limpieza del detector de panel plano"),
+    ("prev_durante.jpg", A, "Detector verificado y equipo operativo"),
 ])
 corr = set_ot_photos("OT-2026-0009", [
-    ("noenc_antes.jpg",     B, "Equipo intervenido (no encendía)"),
-    ("noenc_durante.jpg",   D, "Sistema encendido tras la reparación"),
-    ("noenc_despues_1.jpg", A, "Calidad de imagen restablecida (fluoroscopía)"),
-    ("noenc_despues_2.jpg", A, "Prueba de calidad de imagen"),
+    ("noenc_antes.jpg",     B, "Cable interno enrollado y tensionado por el giro excesivo del arco en C"),
+    ("noenc_durante.jpg",   D, "Equipo encendido tras rehacer las conexiones internas"),
+    ("noenc_despues_1.jpg", A, "Prueba de calidad de imagen (fluoroscopía)"),
+    ("noenc_despues_2.jpg", A, "Prueba de imagen — equipo operativo"),
 ])
 det = WorkOrder.objects.get(number="OT-2026-0005")  # se deja con sus 2 fotos reales
 
