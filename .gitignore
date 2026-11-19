@@ -77,3 +77,11 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.xml
+
+# Carga temporal de base instalada (facturas/packing lists) — NO versionar
+/_import_base_instalada/
+
+# Backups locales (env con secretos, compose) — NO versionar
+.env.bak*
+*.bak
+*.bak-*

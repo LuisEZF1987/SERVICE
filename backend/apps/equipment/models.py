@@ -20,6 +20,7 @@ class Equipment(BaseModel):
         MAMMOGRAPH = "MAMMOGRAPH", "Mamógrafo"
         FLUOROSCOPE = "FLUOROSCOPE", "Fluoroscopio"
         DENSITOMETER = "DENSITOMETER", "Densitómetro"
+        TMT = "TMT", "Prueba de esfuerzo (TMT)"
         OTHER = "OTHER", "Otro"
 
     class Status(models.TextChoices):
@@ -38,6 +39,7 @@ class Equipment(BaseModel):
         Modality.MAMMOGRAPH: "MAMO",
         Modality.FLUOROSCOPE: "FLUORO",
         Modality.DENSITOMETER: "DENSI",
+        Modality.TMT: "TMT",
         Modality.OTHER: "GEN",
     }
 
