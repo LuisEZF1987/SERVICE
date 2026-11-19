@@ -205,3 +205,42 @@ def equipment_history(request, equipment_id):
         },
         f"historial-{equipment.internal_code}.pdf",
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def maintenance_schedule(request, equipment_id):
+    """Cronograma de mantenimiento de UN equipo (para imprimir/enviar al cliente)."""
+    equipment = get_object_or_404(
+        Equipment.objects.select_related("client"), pk=equipment_id
+    )
+    _check_client_access(request.user, equipment.client_id)
+    items = list(equipment.scheduled_maintenances.order_by("scheduled_date"))
+    return _render_pdf(
+        "reports/pdf/maintenance_schedule.html",
+        {"client": equipment.client,
+         "groups": [{"equipment": equipment, "items": items}],
+         "title": f"Cronograma de mantenimiento — {equipment.internal_code}"},
+        f"cronograma-{equipment.internal_code}.pdf",
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def client_maintenance_schedule(request, client_id):
+    """Cronograma de un cliente. Opcional ?equipment=<id>,<id> para seleccionar equipos."""
+    client = get_object_or_404(Client, pk=client_id)
+    _check_client_access(request.user, client.id)
+    eq_qs = client.equipment.order_by("internal_code")
+    sel = request.query_params.get("equipment")
+    if sel:
+        eq_qs = eq_qs.filter(pk__in=[x for x in sel.split(",") if x])
+    groups = [{"equipment": e,
+               "items": list(e.scheduled_maintenances.order_by("scheduled_date"))}
+              for e in eq_qs]
+    return _render_pdf(
+        "reports/pdf/maintenance_schedule.html",
+        {"client": client, "groups": groups,
+         "title": f"Cronograma de mantenimiento — {client.name}"},
+        f"cronograma-{(client.ruc or str(client.id))}.pdf",
+    )

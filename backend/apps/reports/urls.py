@@ -23,4 +23,14 @@ urlpatterns = [
         views.nda_agreement,
         name="report-nda",
     ),
+    path(
+        "maintenance-schedule/equipment/<uuid:equipment_id>/",
+        views.maintenance_schedule,
+        name="report-maintenance-schedule",
+    ),
+    path(
+        "maintenance-schedule/client/<uuid:client_id>/",
+        views.client_maintenance_schedule,
+        name="report-client-maintenance-schedule",
+    ),
 ]

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 1.4cm;
+    @bottom-center { content: "DimedService — cronograma generado el {{ generated_at|date:'d/m/Y H:i' }} — pág. " counter(page) " de " counter(pages); font-size: 8px; color: #888; } }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10px; color: #222; }
+  .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1F4E78; padding-bottom: 8px; margin-bottom: 12px; }
+  .logo { height: 42px; }
+  h1 { color: #1F4E78; font-size: 16px; margin: 0; }
+  .sub { color: #555; font-size: 10px; margin: 2px 0 0; }
+  .eq { background: #Eef3f9; border-left: 3px solid #1F4E78; padding: 5px 8px; margin: 14px 0 4px; font-weight: bold; color: #1F4E78; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { background: #1F4E78; color: #fff; font-size: 9px; }
+  .muted { color: #888; font-style: italic; }
+  .done { color: #2e7d32; } .over { color: #c62828; font-weight: bold; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div>
+      <h1>{{ title }}</h1>
+      <p class="sub">Cliente: {{ client.name }}{% if client.ruc %} · RUC {{ client.ruc }}{% endif %}</p>
+    </div>
+    {% if logo_uri %}<img class="logo" src="{{ logo_uri }}" alt="Dimed">{% endif %}
+  </div>
+
+  {% for g in groups %}
+  <div class="eq">{{ g.equipment.internal_code }} — {{ g.equipment.brand }} {{ g.equipment.model_name }}
+    · S/N {{ g.equipment.serial_number }}{% if g.equipment.area %} · {{ g.equipment.area }}{% endif %}</div>
+  {% if g.items %}
+  <table>
+    <thead>
+      <tr><th style="width:12%">Fecha</th><th style="width:8%">Visita #</th><th style="width:28%">Tipo</th><th style="width:14%">Estado</th><th>Nota</th></tr>
+    </thead>
+    <tbody>
+      {% for m in g.items %}
+      <tr>
+        <td>{{ m.scheduled_date|date:"d/m/Y" }}</td>
+        <td>{% if m.visit_number %}{{ m.visit_number }}{% else %}—{% endif %}</td>
+        <td>{% if m.cost_type %}{{ m.get_cost_type_display }}{% else %}{{ m.get_frequency_display }}{% endif %}</td>
+        <td class="{% if m.status == 'COMPLETED' %}done{% elif m.status == 'OVERDUE' %}over{% endif %}">{{ m.get_status_display }}</td>
+        <td>{{ m.notes|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Este equipo no tiene cronograma de mantenimiento cargado.</p>
+  {% endif %}
+  {% empty %}
+  <p class="muted">No hay equipos para mostrar.</p>
+  {% endfor %}
+</body>
+</html>

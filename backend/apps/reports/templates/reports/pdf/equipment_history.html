@@ -147,14 +147,16 @@
     {% if upcoming %}
     <table>
       <thead>
-        <tr><th>Fecha programada</th><th>Frecuencia</th><th>Estado</th></tr>
+        <tr><th>Fecha programada</th><th>Visita #</th><th>Tipo</th><th>Estado</th><th>Nota</th></tr>
       </thead>
       <tbody>
         {% for m in upcoming %}
         <tr>
           <td>{{ m.scheduled_date|date:"d/m/Y" }}</td>
-          <td>{{ m.get_frequency_display }}</td>
+          <td>{% if m.visit_number %}{{ m.visit_number }}{% else %}—{% endif %}</td>
+          <td>{% if m.cost_type %}{{ m.get_cost_type_display }}{% else %}{{ m.get_frequency_display }}{% endif %}</td>
           <td>{{ m.get_status_display }}</td>
+          <td>{{ m.notes|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>
