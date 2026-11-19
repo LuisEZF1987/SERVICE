@@ -15,10 +15,32 @@ from rest_framework.response import Response
 
 from apps.clients.models import Client
 from apps.clients.services.nda import nda_filename, render_nda_pdf
+import re
+
 from apps.equipment.models import Equipment
 from apps.scheduling.models import ScheduledMaintenance
+from apps.spare_parts.models import SparePart
 from apps.work_orders.models import WorkOrder
 from common.branding import company_logo_data_uri
+
+
+def _norm(s):
+    return re.sub(r"[^A-Z0-9]", "", (s or "").upper())
+
+
+def _stock_para_equipo(equipment):
+    """Repuestos en inventario para el modelo del equipo: mismo fabricante y
+    modelo coincidente (subcadena en cualquier sentido); si el repuesto no fija
+    modelo, se incluye por modalidad igual."""
+    emodel = _norm(equipment.model_name)
+    emod = equipment.modality
+    out = []
+    qs = SparePart.objects.filter(manufacturer__iexact=equipment.brand).order_by("part_number")
+    for p in qs:
+        pmodel = _norm(p.equipment_model)
+        if (pmodel and (pmodel in emodel or emodel in pmodel)) or (not pmodel and p.modality == emod):
+            out.append(p)
+    return out
 
 
 def _render_pdf(template, context, filename):
@@ -141,7 +163,9 @@ def equipment_history(request, equipment_id):
     _check_client_access(request.user, equipment.client_id)
 
     work_orders = list(
-        equipment.work_orders.select_related("technician").order_by("-opened_at")
+        equipment.work_orders.select_related("technician")
+        .prefetch_related("spare_parts_used")
+        .order_by("-opened_at")
     )
     upcoming = list(
         equipment.scheduled_maintenances.filter(
@@ -152,6 +176,22 @@ def equipment_history(request, equipment_id):
         ).order_by("scheduled_date")
     )
     total_hours = sum((float(ot.total_hours or 0) for ot in work_orders), 0.0)
+
+    # Partes/accesorios reemplazados en este equipo (de sus OTs), con fecha.
+    parts_used = []
+    for ot in work_orders:
+        fecha = ot.finished_at or ot.closed_at or ot.opened_at
+        for sp in ot.spare_parts_used.all():
+            parts_used.append({
+                "fecha": fecha, "ot": ot.number, "descripcion": sp.description,
+                "codigo": sp.code, "cantidad": sp.quantity,
+            })
+    parts_used.sort(key=lambda x: x["fecha"] or timezone.now(), reverse=True)
+
+    # Repuestos en inventario para el MODELO de este equipo (mismo fabricante +
+    # modelo coincidente; si el repuesto no fija modelo, se usa la modalidad).
+    stock = _stock_para_equipo(equipment)
+
     return _render_pdf(
         "reports/pdf/equipment_history.html",
         {
@@ -160,6 +200,8 @@ def equipment_history(request, equipment_id):
             "work_orders": work_orders,
             "upcoming": upcoming,
             "total_hours": total_hours,
+            "parts_used": parts_used,
+            "stock": stock,
         },
         f"historial-{equipment.internal_code}.pdf",
     )

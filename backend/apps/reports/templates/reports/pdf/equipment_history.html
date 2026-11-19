@@ -95,6 +95,54 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Partes / accesorios reemplazados</div>
+    {% if parts_used %}
+    <table>
+      <thead>
+        <tr><th>Fecha</th><th>Descripción</th><th>Código</th><th>Cant.</th><th>OT</th></tr>
+      </thead>
+      <tbody>
+        {% for p in parts_used %}
+        <tr>
+          <td>{{ p.fecha|date:"d/m/Y"|default:"—" }}</td>
+          <td>{{ p.descripcion }}</td>
+          <td>{{ p.codigo|default:"—" }}</td>
+          <td>{{ p.cantidad }}</td>
+          <td>{{ p.ot }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Aún no se registran partes reemplazadas en este equipo.</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Repuestos en stock para este modelo ({{ equipment.brand }} {{ equipment.model_name }})</div>
+    {% if stock %}
+    <table>
+      <thead>
+        <tr><th>Part #</th><th>Descripción</th><th>En stock</th><th>Mínimo</th><th>Ubicación</th></tr>
+      </thead>
+      <tbody>
+        {% for s in stock %}
+        <tr>
+          <td>{{ s.part_number }}</td>
+          <td>{{ s.description }}</td>
+          <td>{{ s.stock_quantity }}{% if s.is_below_minimum_stock %} ⚠ bajo mínimo{% endif %}</td>
+          <td>{{ s.minimum_stock }}</td>
+          <td>{{ s.location|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No hay repuestos de este modelo en el inventario.</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
     <div class="section-title">Mantenimientos Programados Próximos</div>
     {% if upcoming %}
     <table>
