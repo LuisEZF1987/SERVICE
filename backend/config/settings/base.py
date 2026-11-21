@@ -255,3 +255,11 @@ COMPANY_REPRESENTATIVE_ROLE = env(
 )
 # Years the confidentiality obligation survives termination
 NDA_VALIDITY_YEARS = env.int("NDA_VALIDITY_YEARS", default=5)
+
+# Google Calendar — sincronización de mantenimientos programados.
+# Reutiliza la cuenta de servicio del CRM (delegación de dominio que impersona al
+# dueño del calendario). Desactivado por defecto: se enciende con env.
+GOOGLE_CALENDAR_ENABLED = env.bool("GOOGLE_CALENDAR_ENABLED", default=False)
+GOOGLE_CALENDAR_SA_JSON = env("GOOGLE_CALENDAR_SA_JSON", default="/app/secrets/gcal-sa.json")
+GOOGLE_CALENDAR_IMPERSONATE = env("GOOGLE_CALENDAR_IMPERSONATE", default="")
+GOOGLE_CALENDAR_ID = env("GOOGLE_CALENDAR_ID", default="primary")

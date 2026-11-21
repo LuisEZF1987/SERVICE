@@ -77,6 +77,30 @@ class ScheduledMaintenance(BaseModel):
         return f"{self.equipment} — {self.scheduled_date} ({self.get_status_display()})"
 
 
+class NotificationSettings(BaseModel):
+    """Destinatarios y configuración de las alertas de mantenimiento (singleton)."""
+    extra_email_1 = models.EmailField("Correo adicional 1", blank=True)
+    extra_email_2 = models.EmailField("Correo adicional 2", blank=True)
+    notify_days_before = models.PositiveIntegerField("Días de aviso", default=7)
+
+    class Meta:
+        verbose_name = "Configuración de notificaciones"
+        verbose_name_plural = "Configuración de notificaciones"
+
+    def __str__(self):
+        return "Configuración de notificaciones de mantenimiento"
+
+    @classmethod
+    def load(cls):
+        obj = cls.objects.first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj
+
+    def extra_recipients(self):
+        return [e for e in (self.extra_email_1, self.extra_email_2) if e]
+
+
 def _add_months(d, months):
     """Suma `months` a una fecha, ajustando fin de mes (sin dependencias)."""
     import calendar

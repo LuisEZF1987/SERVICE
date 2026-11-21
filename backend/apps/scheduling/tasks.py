@@ -24,7 +24,14 @@ def _staff_recipients():
         )
         .exclude(email="")
     )
-    return [u.email for u in qs]
+    emails = [u.email for u in qs]
+    # Correos adicionales configurables (p. ej. contactos de VIAT).
+    try:
+        from .models import NotificationSettings
+        emails += NotificationSettings.load().extra_recipients()
+    except Exception:
+        logger.exception("No se pudieron cargar los correos adicionales")
+    return list(dict.fromkeys(emails))  # únicos, preservando orden
 
 
 def _send_alert(maintenance, days_until):
@@ -88,3 +95,38 @@ def process_maintenance_schedule():
         "Maintenance schedule processed: %s reminder(s), %s overdue", alerts, overdue
     )
     return {"alerts": alerts, "overdue": overdue}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120)
+def sync_maintenance_to_calendar(self, maintenance_id):
+    """Crea/actualiza el evento de Google Calendar de UN mantenimiento (idempotente)."""
+    from .models import ScheduledMaintenance
+    from .services import gcal
+
+    m = (ScheduledMaintenance.objects
+         .select_related("equipment__client").filter(pk=maintenance_id).first())
+    if not m:
+        return
+    try:
+        eid = gcal.upsert_event(m)
+        if eid and eid != m.gcal_event_id:
+            ScheduledMaintenance.objects.filter(pk=m.pk).update(gcal_event_id=eid)
+    except Exception as exc:  # red/quota/credencial → reintentar
+        logger.exception("Fallo sincronizando mantenimiento %s a Calendar", maintenance_id)
+        raise self.retry(exc=exc)
+
+
+@shared_task
+def sync_all_maintenances_to_calendar(only_upcoming=True):
+    """Encola la sincronización de los mantenimientos (por defecto pendientes/vencidos)."""
+    from .models import ScheduledMaintenance
+
+    qs = ScheduledMaintenance.objects.all()
+    if only_upcoming:
+        qs = qs.filter(status__in=[ScheduledMaintenance.Status.PENDING,
+                                   ScheduledMaintenance.Status.OVERDUE])
+    n = 0
+    for mid in qs.values_list("id", flat=True):
+        sync_maintenance_to_calendar.delay(str(mid))
+        n += 1
+    return n

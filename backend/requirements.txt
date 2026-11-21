@@ -39,6 +39,10 @@ pdfplumber==0.11.4
 # Email
 sendgrid==6.11.0
 
+# Google Calendar (sincronización de mantenimientos)
+google-api-python-client==2.149.0
+google-auth==2.35.0
+
 # Utils
 python-dateutil==2.9.0
 uuid6==2024.7.10

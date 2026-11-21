@@ -85,3 +85,6 @@ coverage.xml
 .env.bak*
 *.bak
 *.bak-*
+
+# Credenciales Google (cuenta de servicio) — NO versionar
+/secrets/
