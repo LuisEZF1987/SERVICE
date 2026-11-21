@@ -10,6 +10,15 @@ export const reportsApi = {
   /** Blank NDA pre-filled with the client's data, ready to print and sign. */
   nda: (clientId: string) =>
     api.get<Blob>(`/reports/nda/${clientId}/`, { responseType: 'blob' }),
+  /** Cronograma de mantenimiento de un equipo. */
+  maintenanceSchedule: (equipmentId: string) =>
+    api.get<Blob>(`/reports/maintenance-schedule/equipment/${equipmentId}/`, { responseType: 'blob' }),
+  /** Cronograma de un cliente (opcional: ids de equipos separados por coma). */
+  clientMaintenanceSchedule: (clientId: string, equipmentIds?: string[]) =>
+    api.get<Blob>(`/reports/maintenance-schedule/client/${clientId}/`, {
+      responseType: 'blob',
+      params: equipmentIds?.length ? { equipment: equipmentIds.join(',') } : undefined,
+    }),
 }
 
 /** Trigger a browser download for a PDF blob returned by the API. */

@@ -35,6 +35,7 @@ export default function ClientDetailPage() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [ndaModalOpen, setNdaModalOpen] = useState(false)
   const [downloadingNda, setDownloadingNda] = useState(false)
+  const [downloadingSchedule, setDownloadingSchedule] = useState(false)
   const [sendingNda, setSendingNda] = useState(false)
 
   const { data: client, isLoading } = useQuery({
@@ -54,6 +55,19 @@ export default function ClientDetailPage() {
       toast.error('No se pudo generar el NDA.')
     } finally {
       setDownloadingNda(false)
+    }
+  }
+
+  const downloadSchedule = async () => {
+    if (!client) return
+    setDownloadingSchedule(true)
+    try {
+      const res = await reportsApi.clientMaintenanceSchedule(client.id)
+      downloadBlob(res.data, `cronograma-${client.ruc || client.id}.pdf`)
+    } catch {
+      toast.error('No se pudo generar el cronograma.')
+    } finally {
+      setDownloadingSchedule(false)
     }
   }
 
@@ -125,6 +139,19 @@ export default function ClientDetailPage() {
               }
             >
               Editar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={downloadSchedule}
+              disabled={downloadingSchedule}
+              icon={
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+              }
+            >
+              {downloadingSchedule ? 'Generando...' : 'Exportar cronograma'}
             </Button>
           </>
         }

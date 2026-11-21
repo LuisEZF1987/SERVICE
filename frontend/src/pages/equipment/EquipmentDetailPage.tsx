@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { equipmentApi } from '../../api/equipment'
 import { manualsApi } from '../../api/manuals'
 import { schedulingApi, ScheduledMaintenance } from '../../api/scheduling'
+import { reportsApi, downloadBlob } from '../../api/reports'
+import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
@@ -87,6 +89,7 @@ export default function EquipmentDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [downloading, setDownloading] = useState<'schedule' | 'history' | null>(null)
 
   const isStaff = user?.role !== 'CLIENT'
 
@@ -112,6 +115,32 @@ export default function EquipmentDetailPage() {
       schedulingApi.list({ equipment: id!, page_size: '100' }).then((r) => r.data.results),
     enabled: !!id,
   })
+
+  const downloadSchedule = async () => {
+    if (!equipment) return
+    setDownloading('schedule')
+    try {
+      const res = await reportsApi.maintenanceSchedule(equipment.id)
+      downloadBlob(res.data, `cronograma-${equipment.internal_code}.pdf`)
+    } catch {
+      toast.error('No se pudo generar el cronograma.')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  const downloadHistory = async () => {
+    if (!equipment) return
+    setDownloading('history')
+    try {
+      const res = await reportsApi.equipmentHistory(equipment.id)
+      downloadBlob(res.data, `historial-${equipment.internal_code}.pdf`)
+    } catch {
+      toast.error('No se pudo generar el historial.')
+    } finally {
+      setDownloading(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -167,6 +196,30 @@ export default function EquipmentDetailPage() {
               }
             >
               Editar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={downloadHistory}
+              disabled={downloading !== null}
+              icon={
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" />
+                </svg>
+              }
+            >
+              {downloading === 'history' ? 'Generando...' : 'Historial'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={downloadSchedule}
+              disabled={downloading !== null}
+              icon={
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+              }
+            >
+              {downloading === 'schedule' ? 'Generando...' : 'Exportar cronograma'}
             </Button>
           </>
         }
