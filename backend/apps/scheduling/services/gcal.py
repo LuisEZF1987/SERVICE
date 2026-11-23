@@ -32,9 +32,29 @@ def _service():
     return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
 
+def _plan_for(equipment):
+    """Plan de mantenimiento del equipo, o None si no tiene (reverse OneToOne)."""
+    try:
+        return equipment.maintenance_plan
+    except Exception:
+        return None
+
+
+def _invitados_for(m):
+    """Correos adicionales (VIAT) como invitados, salvo que el plan del equipo los excluya."""
+    from apps.scheduling.models import NotificationSettings
+
+    plan = _plan_for(m.equipment)
+    if plan is not None and not plan.notify_extra_recipients:
+        return []
+    try:
+        return NotificationSettings.load().extra_recipients()
+    except Exception:
+        return []
+
+
 def _event_body(m):
     from datetime import timedelta
-    from apps.scheduling.models import NotificationSettings
 
     e = m.equipment
     tipo = m.get_cost_type_display() if m.cost_type else m.get_frequency_display()
@@ -45,10 +65,7 @@ def _event_body(m):
         f"Visita: {m.visit_number or '—'} · Tipo: {tipo}\n"
         f"{m.notes or ''}"
     ).strip()
-    try:
-        invitados = NotificationSettings.load().extra_recipients()
-    except Exception:
-        invitados = []
+    invitados = _invitados_for(m)
     return {
         "summary": summary,
         "description": description,

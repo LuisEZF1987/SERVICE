@@ -13,8 +13,21 @@ logger = logging.getLogger(__name__)
 ALERT_MILESTONES = [30, 15, 7, 1]
 
 
-def _staff_recipients():
-    """Active Dimed admins/coordinators who coordinate maintenance visits."""
+def _extra_allowed(maintenance):
+    """¿Este mantenimiento permite avisar a los correos adicionales (VIAT)?
+    Si su plan lo desactiva, solo se notifica internamente."""
+    if maintenance is None:
+        return True
+    try:
+        plan = maintenance.equipment.maintenance_plan
+    except Exception:
+        return True
+    return plan.notify_extra_recipients
+
+
+def _staff_recipients(maintenance=None):
+    """Active Dimed admins/coordinators who coordinate maintenance visits.
+    Suma los correos adicionales (VIAT) salvo que el plan del equipo los excluya."""
     from apps.accounts.models import User
 
     qs = (
@@ -26,16 +39,17 @@ def _staff_recipients():
     )
     emails = [u.email for u in qs]
     # Correos adicionales configurables (p. ej. contactos de VIAT).
-    try:
-        from .models import NotificationSettings
-        emails += NotificationSettings.load().extra_recipients()
-    except Exception:
-        logger.exception("No se pudieron cargar los correos adicionales")
+    if _extra_allowed(maintenance):
+        try:
+            from .models import NotificationSettings
+            emails += NotificationSettings.load().extra_recipients()
+        except Exception:
+            logger.exception("No se pudieron cargar los correos adicionales")
     return list(dict.fromkeys(emails))  # únicos, preservando orden
 
 
 def _send_alert(maintenance, days_until):
-    recipients = _staff_recipients()
+    recipients = _staff_recipients(maintenance)
     if not recipients:
         logger.warning("No staff recipients for maintenance alert %s", maintenance.pk)
         return False

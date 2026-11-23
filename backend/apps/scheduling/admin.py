@@ -47,13 +47,15 @@ class ScheduledMaintenanceAdmin(admin.ModelAdmin):
 class MaintenancePlanAdmin(admin.ModelAdmin):
     list_display = [
         "equipment", "anchor_date", "frequency", "total_visits",
-        "free_visits", "completed_visits", "post_warranty_type", "active",
+        "free_visits", "completed_visits", "post_warranty_type",
+        "notify_extra_recipients", "active",
     ]
-    list_filter = ["frequency", "post_warranty_type", "active"]
+    list_editable = ["notify_extra_recipients", "active"]
+    list_filter = ["frequency", "post_warranty_type", "notify_extra_recipients", "active"]
     search_fields = ["equipment__internal_code", "equipment__serial_number", "contract_reference"]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
     raw_id_fields = ["equipment", "contract"]
-    actions = ["regenerar_cronograma"]
+    actions = ["regenerar_cronograma", "resincronizar_calendar"]
 
     @admin.action(description="Regenerar cronograma de las visitas")
     def regenerar_cronograma(self, request, queryset):
@@ -62,3 +64,21 @@ class MaintenancePlanAdmin(admin.ModelAdmin):
             c, a = plan.generate_schedule()
             total_c += c; total_a += a
         self.message_user(request, f"Visitas: {total_c} creadas, {total_a} actualizadas.")
+
+    @admin.action(description="Resincronizar visitas a Google Calendar (aplica cambio de invitados)")
+    def resincronizar_calendar(self, request, queryset):
+        from .services import gcal
+        if not gcal.enabled():
+            self.message_user(request, "Google Calendar está desactivado (GOOGLE_CALENDAR_ENABLED).")
+            return
+        ok = err = 0
+        for plan in queryset:
+            for m in plan.equipment.scheduled_maintenances.all():
+                try:
+                    eid = gcal.upsert_event(m)
+                    if eid and eid != m.gcal_event_id:
+                        ScheduledMaintenance.objects.filter(pk=m.pk).update(gcal_event_id=eid)
+                    ok += 1
+                except Exception:
+                    err += 1
+        self.message_user(request, f"Google Calendar — sincronizados: {ok}, errores: {err}.")

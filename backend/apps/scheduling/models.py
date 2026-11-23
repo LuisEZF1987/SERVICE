@@ -145,6 +145,11 @@ class MaintenancePlan(BaseModel):
     contract_reference = models.CharField("Referencia de contrato", max_length=120, blank=True)
     notes = models.TextField("Notas", blank=True)
     active = models.BooleanField("Activo", default=True)
+    notify_extra_recipients = models.BooleanField(
+        "Notificar también a los correos adicionales (VIAT)", default=True,
+        help_text="Si se desactiva, este equipo solo se agenda/notifica internamente "
+                  "(no se invita ni avisa a los correos adicionales).",
+    )
 
     _MONTHS = {"MONTHLY": 1, "QUARTERLY": 3, "BIANNUAL": 6, "ANNUAL": 12}
 
