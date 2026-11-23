@@ -16,6 +16,7 @@ qrcode==8.0
 
 # Async tasks
 celery==5.4.0
+kombu==5.6.2  # pin: kombu>=5.7 exige redis-py>=6.1.0 y rompe el broker (redis==5.2.1)
 redis==5.2.1
 django-celery-beat==2.7.0
 
