@@ -9,14 +9,7 @@ import Table from '../../components/ui/Table'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import QuoteFormModal from './QuoteFormModal'
-
-export const QUOTE_STATUS_VARIANT: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'secondary' | 'purple'> = {
-  DRAFT: 'secondary',
-  SENT: 'primary',
-  ACCEPTED: 'success',
-  REJECTED: 'danger',
-  EXPIRED: 'warning',
-}
+import { QUOTE_STATUS_VARIANT } from './constants'
 
 const STATUS_FILTER = [
   { value: '', label: 'Todos los estados' },

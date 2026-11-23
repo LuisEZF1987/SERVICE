@@ -14,21 +14,7 @@ import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input, { Select, Textarea } from '../../components/ui/Input'
-
-export const TICKET_STATUS_VARIANT: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'secondary' | 'purple'> = {
-  OPEN: 'primary',
-  IN_PROGRESS: 'warning',
-  ESCALATED: 'danger',
-  RESOLVED: 'success',
-  CLOSED: 'secondary',
-}
-
-export const TICKET_PRIORITY_VARIANT: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'secondary' | 'purple'> = {
-  CRITICAL: 'danger',
-  HIGH: 'warning',
-  NORMAL: 'primary',
-  LOW: 'secondary',
-}
+import { TICKET_STATUS_VARIANT, TICKET_PRIORITY_VARIANT } from './constants'
 
 const CHANNEL_OPTIONS = [
   { value: 'PHONE', label: 'Teléfono' },

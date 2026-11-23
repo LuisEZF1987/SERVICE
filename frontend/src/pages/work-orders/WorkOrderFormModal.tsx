@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -78,7 +78,7 @@ export default function WorkOrderFormModal({ open, onClose, workOrder }: WorkOrd
     enabled: open,
   })
 
-  const equipmentList = equipmentData?.results ?? []
+  const equipmentList = useMemo(() => equipmentData?.results ?? [], [equipmentData])
   const clientsList = clientsData?.results ?? []
   const techniciansList = techniciansData?.results ?? []
 

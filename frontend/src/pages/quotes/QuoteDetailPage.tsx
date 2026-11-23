@@ -12,7 +12,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input, { Select } from '../../components/ui/Input'
 import QuoteFormModal from './QuoteFormModal'
-import { QUOTE_STATUS_VARIANT } from './QuotesPage'
+import { QUOTE_STATUS_VARIANT } from './constants'
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'

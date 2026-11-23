@@ -12,7 +12,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import { Select, Textarea } from '../../components/ui/Input'
-import { TICKET_PRIORITY_VARIANT, TICKET_STATUS_VARIANT } from './TicketsPage'
+import { TICKET_PRIORITY_VARIANT, TICKET_STATUS_VARIANT } from './constants'
 import QuoteFormModal from '../quotes/QuoteFormModal'
 
 function formatDateTime(iso: string | null): string {
