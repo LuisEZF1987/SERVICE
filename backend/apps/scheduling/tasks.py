@@ -127,7 +127,7 @@ def sync_maintenance_to_calendar(self, maintenance_id):
             ScheduledMaintenance.objects.filter(pk=m.pk).update(gcal_event_id=eid)
     except Exception as exc:  # red/quota/credencial → reintentar
         logger.exception("Fallo sincronizando mantenimiento %s a Calendar", maintenance_id)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task

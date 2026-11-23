@@ -3,6 +3,8 @@
 Reports are rendered on demand with WeasyPrint (same engine as the OT PDF)
 and streamed back as application/pdf — no persistent models needed.
 """
+import re
+
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -15,8 +17,6 @@ from rest_framework.response import Response
 
 from apps.clients.models import Client
 from apps.clients.services.nda import nda_filename, render_nda_pdf
-import re
-
 from apps.equipment.models import Equipment
 from apps.scheduling.models import ScheduledMaintenance
 from apps.spare_parts.models import SparePart
@@ -254,6 +254,7 @@ def _ics_escape(s):
 
 def _ics_for_groups(groups, calname):
     from datetime import timedelta
+
     from django.http import HttpResponse
     from django.utils import timezone
 

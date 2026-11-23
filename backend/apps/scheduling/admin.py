@@ -62,7 +62,8 @@ class MaintenancePlanAdmin(admin.ModelAdmin):
         total_c = total_a = 0
         for plan in queryset:
             c, a = plan.generate_schedule()
-            total_c += c; total_a += a
+            total_c += c
+            total_a += a
         self.message_user(request, f"Visitas: {total_c} creadas, {total_a} actualizadas.")
 
     @admin.action(description="Resincronizar visitas a Google Calendar (aplica cambio de invitados)")
