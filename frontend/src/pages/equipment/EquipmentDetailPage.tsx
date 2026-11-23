@@ -89,7 +89,7 @@ export default function EquipmentDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [editModalOpen, setEditModalOpen] = useState(false)
-  const [downloading, setDownloading] = useState<'schedule' | 'history' | null>(null)
+  const [downloading, setDownloading] = useState<'schedule' | 'history' | 'ics' | null>(null)
 
   const isStaff = user?.role !== 'CLIENT'
 
@@ -137,6 +137,19 @@ export default function EquipmentDetailPage() {
       downloadBlob(res.data, `historial-${equipment.internal_code}.pdf`)
     } catch {
       toast.error('No se pudo generar el historial.')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  const downloadScheduleIcs = async () => {
+    if (!equipment) return
+    setDownloading('ics')
+    try {
+      const res = await reportsApi.maintenanceScheduleIcs(equipment.id)
+      downloadBlob(res.data, `cronograma-${equipment.internal_code}.ics`)
+    } catch {
+      toast.error('No se pudo generar el .ics.')
     } finally {
       setDownloading(null)
     }
@@ -220,6 +233,14 @@ export default function EquipmentDetailPage() {
               }
             >
               {downloading === 'schedule' ? 'Generando...' : 'Exportar cronograma'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={downloadScheduleIcs}
+              disabled={downloading !== null}
+              title="Descargar .ics para importar a Google/Outlook/Apple Calendar"
+            >
+              {downloading === 'ics' ? '...' : '.ics'}
             </Button>
           </>
         }

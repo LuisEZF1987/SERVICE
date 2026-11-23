@@ -33,4 +33,14 @@ urlpatterns = [
         views.client_maintenance_schedule,
         name="report-client-maintenance-schedule",
     ),
+    path(
+        "maintenance-schedule/equipment/<uuid:equipment_id>/ics/",
+        views.maintenance_schedule_ics,
+        name="report-maintenance-schedule-ics",
+    ),
+    path(
+        "maintenance-schedule/client/<uuid:client_id>/ics/",
+        views.client_maintenance_schedule_ics,
+        name="report-client-maintenance-schedule-ics",
+    ),
 ]

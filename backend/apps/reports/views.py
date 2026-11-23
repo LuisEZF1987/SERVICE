@@ -244,3 +244,75 @@ def client_maintenance_schedule(request, client_id):
          "title": f"Cronograma de mantenimiento — {client.name}"},
         f"cronograma-{(client.ruc or str(client.id))}.pdf",
     )
+
+
+# ── Cronograma en .ics (el cliente lo importa a su propio calendario) ──────────
+def _ics_escape(s):
+    return (str(s or "").replace("\\", "\\\\").replace("\n", "\\n")
+            .replace(",", "\\,").replace(";", "\\;"))
+
+
+def _ics_for_groups(groups, calname):
+    from datetime import timedelta
+    from django.http import HttpResponse
+    from django.utils import timezone
+
+    stamp = timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0",
+             "PRODID:-//Dimed Healthcare//DimedService//ES",
+             "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+             f"X-WR-CALNAME:{_ics_escape(calname)}"]
+    for g in groups:
+        e = g["equipment"]
+        for m in g["items"]:
+            if m.status in ("COMPLETED", "CANCELLED"):
+                continue  # solo visitas futuras/pendientes
+            d = m.scheduled_date
+            tipo = m.get_cost_type_display() if m.cost_type else m.get_frequency_display()
+            summary = (f"Mantenimiento V{m.visit_number or '-'} — "
+                       f"{e.internal_code} {e.brand} {e.model_name}")
+            desc = (f"Cliente: {e.client.name} | Equipo: {e.brand} {e.model_name} "
+                    f"(S/N {e.serial_number}) | Tipo: {tipo}. {m.notes or ''}")
+            lines += [
+                "BEGIN:VEVENT", f"UID:{m.id}@dimedservice", f"DTSTAMP:{stamp}",
+                f"DTSTART;VALUE=DATE:{d.strftime('%Y%m%d')}",
+                f"DTEND;VALUE=DATE:{(d + timedelta(days=1)).strftime('%Y%m%d')}",
+                f"SUMMARY:{_ics_escape(summary)}",
+                f"DESCRIPTION:{_ics_escape(desc)}",
+                "BEGIN:VALARM", "TRIGGER:-P7D", "ACTION:DISPLAY",
+                "DESCRIPTION:Recordatorio de mantenimiento", "END:VALARM",
+                "END:VEVENT",
+            ]
+    lines.append("END:VCALENDAR")
+    body = "\r\n".join(lines) + "\r\n"
+    resp = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+    return resp
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def maintenance_schedule_ics(request, equipment_id):
+    equipment = get_object_or_404(Equipment.objects.select_related("client"), pk=equipment_id)
+    _check_client_access(request.user, equipment.client_id)
+    groups = [{"equipment": equipment,
+               "items": list(equipment.scheduled_maintenances.order_by("scheduled_date"))}]
+    resp = _ics_for_groups(groups, f"Cronograma {equipment.internal_code}")
+    resp["Content-Disposition"] = f'attachment; filename="cronograma-{equipment.internal_code}.ics"'
+    return resp
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def client_maintenance_schedule_ics(request, client_id):
+    client = get_object_or_404(Client, pk=client_id)
+    _check_client_access(request.user, client.id)
+    eq_qs = client.equipment.order_by("internal_code")
+    sel = request.query_params.get("equipment")
+    if sel:
+        eq_qs = eq_qs.filter(pk__in=[x for x in sel.split(",") if x])
+    groups = [{"equipment": e,
+               "items": list(e.scheduled_maintenances.order_by("scheduled_date"))}
+              for e in eq_qs]
+    resp = _ics_for_groups(groups, f"Cronograma {client.name}")
+    resp["Content-Disposition"] = f'attachment; filename="cronograma-{(client.ruc or client.id)}.ics"'
+    return resp

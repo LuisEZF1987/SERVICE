@@ -19,6 +19,15 @@ export const reportsApi = {
       responseType: 'blob',
       params: equipmentIds?.length ? { equipment: equipmentIds.join(',') } : undefined,
     }),
+  /** Cronograma de un equipo en .ics (para importar a Google/Outlook/Apple). */
+  maintenanceScheduleIcs: (equipmentId: string) =>
+    api.get<Blob>(`/reports/maintenance-schedule/equipment/${equipmentId}/ics/`, { responseType: 'blob' }),
+  /** Cronograma de un cliente en .ics. */
+  clientMaintenanceScheduleIcs: (clientId: string, equipmentIds?: string[]) =>
+    api.get<Blob>(`/reports/maintenance-schedule/client/${clientId}/ics/`, {
+      responseType: 'blob',
+      params: equipmentIds?.length ? { equipment: equipmentIds.join(',') } : undefined,
+    }),
 }
 
 /** Trigger a browser download for a PDF blob returned by the API. */

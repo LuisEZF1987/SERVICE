@@ -36,6 +36,7 @@ export default function ClientDetailPage() {
   const [ndaModalOpen, setNdaModalOpen] = useState(false)
   const [downloadingNda, setDownloadingNda] = useState(false)
   const [downloadingSchedule, setDownloadingSchedule] = useState(false)
+  const [downloadingIcs, setDownloadingIcs] = useState(false)
   const [sendingNda, setSendingNda] = useState(false)
 
   const { data: client, isLoading } = useQuery({
@@ -68,6 +69,19 @@ export default function ClientDetailPage() {
       toast.error('No se pudo generar el cronograma.')
     } finally {
       setDownloadingSchedule(false)
+    }
+  }
+
+  const downloadScheduleIcs = async () => {
+    if (!client) return
+    setDownloadingIcs(true)
+    try {
+      const res = await reportsApi.clientMaintenanceScheduleIcs(client.id)
+      downloadBlob(res.data, `cronograma-${client.ruc || client.id}.ics`)
+    } catch {
+      toast.error('No se pudo generar el .ics.')
+    } finally {
+      setDownloadingIcs(false)
     }
   }
 
@@ -152,6 +166,14 @@ export default function ClientDetailPage() {
               }
             >
               {downloadingSchedule ? 'Generando...' : 'Exportar cronograma'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={downloadScheduleIcs}
+              disabled={downloadingIcs}
+              title="Descargar .ics para importar a Google/Outlook/Apple Calendar"
+            >
+              {downloadingIcs ? '...' : '.ics'}
             </Button>
           </>
         }
