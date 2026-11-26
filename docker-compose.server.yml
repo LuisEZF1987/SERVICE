@@ -8,7 +8,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file: .env
-    restart: unless-stopped
+    restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -17,7 +17,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
+    restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -37,6 +37,7 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - ./manuales:/app/manuales:ro
+      - ./secrets:/app/secrets:ro
     depends_on:
       db:
         condition: service_healthy
@@ -45,7 +46,7 @@ services:
     networks:
       - default
       - dimed-shared
-    restart: unless-stopped
+    restart: always
 
   celery:
     build:
@@ -56,6 +57,7 @@ services:
     volumes:
       - media_volume:/app/media
       - ./manuales:/app/manuales:ro
+      - ./secrets:/app/secrets:ro
     depends_on:
       db:
         condition: service_healthy
@@ -64,7 +66,7 @@ services:
     networks:
       - default
       - dimed-shared
-    restart: unless-stopped
+    restart: always
 
   celery-beat:
     build:
@@ -80,7 +82,7 @@ services:
     networks:
       - default
       - dimed-shared
-    restart: unless-stopped
+    restart: always
 
   frontend:
     build:
@@ -93,7 +95,7 @@ services:
       - media_volume:/usr/share/nginx/media:ro
     depends_on:
       - backend
-    restart: unless-stopped
+    restart: always
 
 volumes:
   postgres_data:
