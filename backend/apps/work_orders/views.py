@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
@@ -66,6 +66,14 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             qs = qs.filter(client=user.client_organization)
 
         return qs
+
+    def perform_destroy(self, instance):
+        # Una OT firmada/cerrada certifica el servicio y es la base para facturar: no se borra
+        # (antes DELETE devolvía 204 y la eliminaba).
+        if instance.status in (WorkOrder.Status.SIGNED, WorkOrder.Status.CLOSED):
+            raise ValidationError(
+                {"detail": "Una OT firmada o cerrada es un documento oficial: no se puede eliminar."})
+        instance.delete()
 
     def perform_create(self, serializer):
         ot = serializer.save(created_by=self.request.user)

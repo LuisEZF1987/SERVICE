@@ -174,7 +174,33 @@ class WorkOrder(BaseModel):
     def __str__(self):
         return f"{self.number} — {self.equipment.internal_code} ({self.get_status_display()})"
 
+    # Tras el cierre solo cambian el PDF final (se regenera bloqueado) y la marca de envío.
+    _POST_CLOSE_FIELDS = {"pdf_document", "signature_email_sent", "updated_at"}
+
+    def _assert_closed_immutable(self):
+        """BUSINESS RULE (OT cerrada = documento oficial, base de facturación): inmutable.
+        Antes la regla vivía solo en clean() (formularios/admin) y en el serializer; un
+        .save() directo de cualquier servicio/tarea la modificaba (verificado 2026-11-26)."""
+        if not self.pk:
+            return
+        original = type(self).objects.filter(pk=self.pk).first()
+        if not original or original.status != self.Status.CLOSED:
+            return
+        changed = {f.attname for f in self._meta.concrete_fields
+                   if getattr(original, f.attname) != getattr(self, f.attname)}
+        prohibidos = changed - self._POST_CLOSE_FIELDS
+        if prohibidos:
+            raise ValidationError(
+                f"Una OT cerrada y firmada no puede ser modificada ({', '.join(sorted(prohibidos))})."
+            )
+
+    def delete(self, *args, **kwargs):
+        if self.status in (self.Status.SIGNED, self.Status.CLOSED):
+            raise ValidationError("Una OT firmada o cerrada es un documento oficial: no se puede eliminar.")
+        return super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
+        self._assert_closed_immutable()
         if not self.number:
             self.number = self._generate_number()
         # Auto-calculate total hours

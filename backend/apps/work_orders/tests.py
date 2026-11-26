@@ -226,3 +226,54 @@ class WorkOrderApiTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         ids = [row["id"] for row in resp.json()["results"]]
         self.assertEqual(ids, [str(mine.id)])
+
+
+class ClosedWorkOrderImmutabilityTests(TestCase):
+    """OT cerrada = documento oficial (base de facturación). 2026-11-26, sobre una copia de los
+    datos reales: un .save() directo modificaba una OT cerrada y DELETE (API) la eliminaba (204)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.client_org, cls.equipment, cls.technician, cls.coordinator = make_fixtures()
+
+    def _closed_ot(self):
+        ot = WorkOrder.objects.create(ot_type=WorkOrder.Type.CORRECTIVE, equipment=self.equipment,
+                                      client=self.client_org, technician=self.technician)
+        WorkOrder.objects.filter(pk=ot.pk).update(status=WorkOrder.Status.CLOSED,
+                                                  closed_at=timezone.now())
+        ot.refresh_from_db()
+        return ot
+
+    def test_save_directo_no_modifica_ot_cerrada(self):
+        from django.core.exceptions import ValidationError
+        ot = self._closed_ot()
+        ot.diagnosis = "ALTERADO"
+        with self.assertRaises(ValidationError):
+            ot.save()
+        ot.refresh_from_db()
+        self.assertNotEqual(ot.diagnosis, "ALTERADO")
+
+    def test_tras_el_cierre_si_se_permite_guardar_pdf_y_marca_de_envio(self):
+        ot = self._closed_ot()
+        ot.signature_email_sent = True
+        ot.save(update_fields=["signature_email_sent"])      # tarea de envío
+        ot.save()                                              # guardado completo sin cambios
+        ot.refresh_from_db()
+        self.assertTrue(ot.signature_email_sent)
+
+    def test_api_no_elimina_ot_cerrada_ni_firmada(self):
+        api = APIClient()
+        api.force_authenticate(self.coordinator)
+        for st in (WorkOrder.Status.CLOSED, WorkOrder.Status.SIGNED):
+            ot = self._closed_ot()
+            WorkOrder.objects.filter(pk=ot.pk).update(status=st)
+            r = api.delete(f"/api/v1/work-orders/{ot.pk}/")
+            self.assertEqual(r.status_code, 400, st)
+            self.assertTrue(WorkOrder.objects.filter(pk=ot.pk).exists(), st)
+
+    def test_api_si_elimina_ot_abierta(self):
+        api = APIClient()
+        api.force_authenticate(self.coordinator)
+        ot = WorkOrder.objects.create(ot_type=WorkOrder.Type.CORRECTIVE, equipment=self.equipment,
+                                      client=self.client_org, technician=self.technician)
+        self.assertEqual(api.delete(f"/api/v1/work-orders/{ot.pk}/").status_code, 204)
