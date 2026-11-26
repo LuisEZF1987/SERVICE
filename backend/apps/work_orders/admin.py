@@ -20,6 +20,17 @@ class ChecklistExecutionInline(admin.TabularInline):
 
 @admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
+    def has_delete_permission(self, request, obj=None):
+        # OT firmada/cerrada = documento oficial: no se elimina (tampoco por acción masiva)
+        if obj is not None and obj.status in (WorkOrder.Status.SIGNED, WorkOrder.Status.CLOSED):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def get_actions(self, request):
+        acciones = super().get_actions(request)
+        acciones.pop("delete_selected", None)   # el borrado masivo no pasa por las reglas
+        return acciones
+
     list_display = [
         "number", "ot_type", "priority", "status", "equipment",
         "client", "technician", "opened_at",
